@@ -19,8 +19,8 @@
   };
   var ORDER = ['unseen', 'forgotten', 'fuzzy', 'skilled', 'mastered'];
 
-  function loadDB() { try { return JSON.parse(localStorage.getItem(KEY)) || { cards: {} }; } catch (e) { return { cards: {} }; } }
-  function saveDB() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+  function loadDB() { try { return JSON.parse(window.KnowledgeStorage.getItem(KEY)) || { cards: {} }; } catch (e) { return { cards: {} }; } }
+  function saveDB() { try { window.KnowledgeStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { document.getElementById('cloudStatus').textContent = '保存失败：' + e.message; } }
   var db = loadDB();
   if (!db.cards) db.cards = {};
   var reviewMode = false;
@@ -41,7 +41,7 @@
   function read(cid) { return db.cards[cid] || null; }
   function get(cid) {
     if (!db.cards[cid]) db.cards[cid] = window.ReviewEngine.createCard();
-    return db.cards[cid];
+    var card=document.getElementById(cid);db.cards[cid].strategy=card?window.KnowledgeLibrary.getStrategy(card.dataset.category):'default';return db.cards[cid];
   }
   function norm(v) { return LEVELS[v] ? v : 'unseen'; }
   /** 是否仍在学习队列（未毕业）：连续 2 次达标前都算没还完的债 */
@@ -59,7 +59,7 @@
   var MASTERED_TRACK = [30, 60, 120];
 
   function applyVerdict(c, level, cov, acc, manual) {
-    window.ReviewEngine.apply(c, level, cov, acc, manual);
+    window.ReviewEngine.apply(c, level, cov, acc, manual, undefined, {id:crypto.randomUUID(),fullHistory:!!window.KnowledgeStorage.account,strategy:c.strategy});
     saveDB();
   }
 
@@ -169,7 +169,7 @@
     if (meta) {
       meta.innerHTML = serverOk
         ? 'AI 自测 ' + quizzes + ' 次 · 平均覆盖 ' + (scoreN ? Math.round(scoreSum / scoreN) : 0) + '%' + (passes ? ' · 翻车 ' + passes + ' 次' : '')
-        : '<span style="color:#fca5a5">判分服务未连接：请运行 node server.js</span>';
+        : '<span style="color:#fca5a5">AI 未启用，本地复习仍可使用</span>';
     }
   }
 
@@ -278,6 +278,7 @@
   var quizState = {};   // cid -> {mode, questions:[], ready:bool}
 
   function api(path, body) {
+    if (!body.strategy) body.strategy='default';
     return fetch(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -374,7 +375,7 @@
     if (st.mode === 'quick') {
       var lock = c.restudy && !st.ready;
       stage.innerHTML = gateHtml
-        + '<div class="quiz-q">凭记忆复述这道题（别看答案，能写多少写多少）：</div>'
+        + '<div class="quiz-q">'+({default:'凭记忆复述要点',language:'回忆词义、用法与例句',concept:'解释原理、关联与边界',practice:'写出步骤、推导条件与结果'}[get(cid).strategy]||'复述要点')+'（请先独立作答）：</div>'
         + (lock
           ? '<div class="quiz-err">需先回顾答案：点击上方卡片标题展开答案，然后点下面的「已回顾答案，开始复述」。</div>'
           : '<textarea id="qa-' + cid + '" placeholder="例如：new 的过程中，operator new 只分配内存…">' + esc(st.verdict ? '' : (st.answer || '')) + '</textarea>')
@@ -527,7 +528,7 @@
       stS.answer = ans;                                  // 存档：判分失败重渲染时输入不丢
       act.textContent = 'DeepSeek 判分中…';
       act.disabled = true;
-      api('/api/judge', { mode: 'quick', question: titleOf(cid), reference: referenceOf(cid), gist: gistOf(cid), answer: ans })
+      api('/api/judge', { strategy:get(cid).strategy, mode: 'quick', question: titleOf(cid), reference: referenceOf(cid), gist: gistOf(cid), answer: ans })
         .then(function (r) {
           act.disabled = false; act.textContent = '提交判分';
           if (!r.ok) { failVerdict(cid, r.error); return; }
@@ -550,7 +551,7 @@
       if (!qa.some(function (x) { return x.userAnswer; })) { failVerdict(cid, '至少回答一题再提交。'); return; }
       act.textContent = 'DeepSeek 判分中…';
       act.disabled = true;
-      api('/api/judge', { mode: 'deep', question: titleOf(cid), reference: referenceOf(cid), gist: gistOf(cid), qa: qa })
+      api('/api/judge', { strategy:get(cid).strategy, mode: 'deep', question: titleOf(cid), reference: referenceOf(cid), gist: gistOf(cid), qa: qa })
         .then(function (r) {
           act.disabled = false; act.textContent = '提交判分';
           if (!r.ok) { failVerdict(cid, r.error); return; }
@@ -570,7 +571,7 @@
     snapshotInputs(cid, st);                            // 出题失败重渲染时保留已答内容
     st.loading = true; st.quizErr = ''; st.verdict = '';
     renderStage(cid);
-    api('/api/quiz', { question: titleOf(cid), reference: referenceOf(cid) })
+    api('/api/quiz', { strategy:get(cid).strategy, question: titleOf(cid), reference: referenceOf(cid) })
       .then(function (r) {
         st.loading = false;
         if (!r.ok) { st.quizErr = '<div class="quiz-err">出题失败：' + esc(r.error) + '</div>'; renderStage(cid); return; }
@@ -580,6 +581,8 @@
       });
   }
 
+  document.addEventListener('knowledge-local-verdict',function(e){var d=e.detail,c=get(d.cid);applyVerdict(c,d.correct?'skilled':'forgotten',d.correct?100:0,d.correct?100:0,false);updateLvlBtn(d.cid);renderStats();applyReviewMode();renderBasket();});
+  document.addEventListener('knowledge-library-rendered',function(){injectLvlButtons();buildPops();document.querySelectorAll('.q-lvl').forEach(function(box){updateLvlBtn(box.getAttribute('data-cid'));});updateAiAvailability();renderStats();applyReviewMode();});
   /* —— 初始化 —— */
   injectLvlButtons();
   buildPops();
@@ -587,16 +590,15 @@
   document.querySelectorAll('.q-lvl').forEach(function (box) { updateLvlBtn(box.getAttribute('data-cid')); });
   document.getElementById('reviewModeBtn').addEventListener('click', toggleReviewMode);
   renderStats();
+  document.addEventListener('knowledge-progress-replaced', function (event) {
+    db.cards = event.detail.cards;
+    refreshLapsed();
+    document.querySelectorAll('.q-lvl').forEach(function (box) { updateLvlBtn(box.getAttribute('data-cid')); });
+    renderStats(); applyReviewMode(); renderBasket();
+  });
   document.addEventListener('knowledge-filter-change', function () { renderStats(); if (basket.classList.contains('open')) renderBasket(); });
-  fetch('/api/health').then(function (r) { return r.json(); }).then(function (j) {
-    serverOk = !!(j && j.ok && j.hasKey);
-    renderStats();
-    document.querySelectorAll('.quiz-btn').forEach(function (b) {
-      b.style.opacity = serverOk ? '1' : '.45';
-      if (!serverOk) b.title = '判分服务未连接：请先运行 node server.js';
-    });
-    if (basket.classList.contains('open')) renderBasket();
-  }).catch(function () { serverOk = false; renderStats(); });
+  function updateAiAvailability(){document.querySelectorAll('.quiz-btn,#exGenKp,#exGenQ,#exRetry').forEach(function(b){b.disabled=!serverOk;b.title=serverOk?'AI 服务可用':'AI 尚未启用。免费静态托管仅提供本地学习与同步；使用 AI 需运行本地服务并配置密钥。';});var label=document.getElementById('aiAvailability');if(label)label.textContent=serverOk?'AI 服务已连接':'AI 尚未启用：可使用本地题型作答和手动复习。资料 AI 生成需另行连接服务。';}
+  fetch('/api/health').then(function(r){return r.json();}).then(function(j){serverOk=!!(j&&j.ok&&j.hasKey);updateAiAvailability();renderStats();if(basket.classList.contains('open'))renderBasket();}).catch(function(){serverOk=false;updateAiAvailability();renderStats();});
 
   var syncState = { pending: null, tab: 'file' };
 

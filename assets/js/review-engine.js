@@ -5,13 +5,15 @@
   'use strict';
   var DAY = 86400000;
   var tracks = { skilled: [7, 15, 30, 60], mastered: [30, 60, 120] };
+  var profiles={default:tracks,language:{skilled:[1,3,7,14],mastered:[7,14,30]},concept:{skilled:[3,7,14,30],mastered:[14,30,60]},practice:{skilled:[2,7,14,30],mastered:[7,21,45]}};
   var levels = ['forgotten', 'fuzzy', 'skilled', 'mastered'];
   function createCard() {
     return { level: null, reps: 0, interval: 0, ease: 2.5, due: 0, gate: 0, stage: 0, lapses: 0, quizzes: 0, restudy: false, history: [] };
   }
-  function apply(card, level, coverage, accuracy, manual, timestamp) {
+  function apply(card, level, coverage, accuracy, manual, timestamp, options) {
     if (level !== null && levels.indexOf(level) < 0) throw new Error('未知记忆等级');
     var now = timestamp == null ? Date.now() : timestamp;
+    var strategy=options&&profiles[options.strategy]?options.strategy:'default';card.strategy=strategy;var schedule=profiles[strategy];
     card.level = level;
     if (level === null) {
       card.reps = 0; card.interval = 0; card.due = 0; card.gate = 0; card.stage = 0; card.restudy = false;
@@ -35,25 +37,28 @@
         card.gate = (card.gate || 0) + 1; card.restudy = false;
         if (card.gate >= 2) {
           card.stage = (card.stage || 0) + 1;
-          card.interval = tracks[level][Math.min(card.stage - 1, tracks[level].length - 1)];
+          card.interval = schedule[level][Math.min(card.stage - 1, schedule[level].length - 1)];
           card.due = now + card.interval * DAY;
         } else { card.interval = 1; card.due = now; }
       }
     }
     var event = { ts: now, result: manual ? 'manual-' + (level || 'unseen') : 'quiz', level: level, coverage: coverage == null ? null : coverage, accuracy: accuracy == null ? null : accuracy, interval: card.interval };
+    if(strategy!=='default')event.strategy=strategy;
+    if (options && options.id) event.id = options.id;
+    if (options && options.fullHistory) card.fullHistory = true;
     // Keep a checkpoint before the retained history window for later merges.
     card.history.push(event);
-    if (card.history.length > 60) {
+    if (!card.fullHistory && card.history.length > 60) {
       var dropped = card.history.shift();
       var checkpoint = card.checkpoint ? JSON.parse(JSON.stringify(card.checkpoint)) : createCard();
       checkpoint.history = [];
-      apply(checkpoint, dropped.level, dropped.coverage, dropped.accuracy, String(dropped.result).indexOf('manual-') === 0, dropped.ts);
+      apply(checkpoint, dropped.level, dropped.coverage, dropped.accuracy, String(dropped.result).indexOf('manual-') === 0, dropped.ts,{strategy:dropped.strategy});
       checkpoint.history = []; delete checkpoint.checkpoint;
       card.checkpoint = checkpoint; card.checkpointAt = dropped.ts;
     }
     return card;
   }
-  function key(e) { return e.ts + '|' + e.result + '|' + e.level; }
+  function key(e) { return e.id || e.ts + '|' + e.result + '|' + e.level; }
   function merge(left, right) {
     var seen = Object.create(null);
     (left.history || []).concat(right.history || []).forEach(function (event) {
@@ -82,7 +87,7 @@
     var out = checkpoints.length ? JSON.parse(JSON.stringify(checkpoints[0].checkpoint)) : createCard();
     out.history = [];
     if (checkpoints.length) { out.checkpoint = checkpoints[0].checkpoint; out.checkpointAt = checkpoints[0].checkpointAt; }
-    events.forEach(function (e) { apply(out, e.level, e.coverage, e.accuracy, String(e.result || '').indexOf('manual-') === 0, e.ts); });
+    events.forEach(function (e) { apply(out, e.level, e.coverage, e.accuracy, String(e.result || '').indexOf('manual-') === 0, e.ts, { id:e.id,strategy:e.strategy, fullHistory:!!(left.fullHistory || right.fullHistory) }); });
     return out;
   }
   return { createCard: createCard, apply: apply, merge: merge };

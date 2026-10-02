@@ -3,10 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2563eb">
+<link rel="manifest" href="manifest.webmanifest">
 <title>知识复习工作台</title>
 
 <link rel="stylesheet" href="assets/css/app.css">
 <link rel="stylesheet" href="assets/css/library.css">
+<link rel="stylesheet" href="assets/css/cloud.css">
 </head>
 <body>
 <div class="layout">
@@ -32,8 +35,9 @@
   <main>
     <div class="topbar">
       <h1>知识复习工作台</h1>
+      <div class="cloud-bar"><button class="sync-btn" id="cloudOpen">账号与同步</button><span id="cloudStatus" role="status" aria-live="polite">本地模式</span><button class="sync-btn" id="cloudReload" hidden>应用内容更新</button><button class="sync-btn" id="pwaUpdate" hidden>更新应用版本</button><button class="sync-btn" id="pwaInstall" hidden>安装应用</button></div>
       <div class="module-bar"><div id="categoryTabs" class="category-tabs" aria-label="最近使用的知识模块"></div><button class="module-manage" id="manageModulesBtn">全部模块 / 管理</button></div>
-      <div class="library-tools"><label>知识专题 <select id="subjectSelect"><option value="">全部专题</option></select></label><button class="btn" id="addKnowledgeBtn">添加知识</button></div>
+      <p id="aiAvailability" role="status"></p><div class="library-tools"><label>知识专题 <select id="subjectSelect"><option value="">全部专题</option></select></label><button class="btn" id="addKnowledgeBtn">添加知识</button></div>
       <div class="toolbar">
         <div class="search-box">
           <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
@@ -63,6 +67,22 @@
   </main>
 </div>
 
+<dialog class="knowledge-dialog" id="cloudDialog" aria-labelledby="cloudTitle">
+  <div class="knowledge-dialog-head"><h2 id="cloudTitle">账号与云端同步</h2><button class="dialog-close" id="cloudClose" aria-label="关闭账号与同步">×</button></div>
+  <p id="cloudDetail" role="status" aria-live="polite"></p>
+  <p class="dialog-hint">同步自定义题库、复习进度和模块配置。原始 PDF、Word、图片及资料提取工作台保留在本机。</p>
+  <p id="cloudSetup">尚未配置云端。请按照项目中的「docs/免费托管与云同步.md」创建 Supabase 项目并部署。本地复习和文件导入导出可以继续使用。</p>
+  <form id="cloudLogin" hidden>
+    <label for="cloudEmail">邮箱</label><input id="cloudEmail" type="email" autocomplete="username" required>
+    <label for="cloudPassword">密码</label><input id="cloudPassword" type="password" autocomplete="current-password" required>
+    <button class="btn" id="cloudLoginSubmit" type="submit">登录并同步</button>
+    <p class="dialog-hint">第一版账号由你在 Supabase 控制台创建，无需短信。登录后使用独立的账号数据；已有本机记录可主动迁移。</p>
+  </form>
+  <div id="cloudAccountActions" hidden><p>当前账号：<span id="cloudUser"></span></p><div class="cloud-actions"><button class="btn" id="cloudSyncNow">立即同步</button><button class="sync-btn" id="cloudMigrate">迁移本机数据到此账号</button><button class="sync-btn" id="cloudLogout">退出账号</button></div></div>
+  <div id="cloudConflicts"></div><button class="btn" id="cloudResolve" hidden>按所选内容继续</button>
+  <p class="dialog-hint">退出后回到原来的本地模式。离线操作先保存在当前设备，恢复联网并打开应用后补同步。</p>
+</dialog>
+
 <dialog class="knowledge-dialog" id="addKnowledgeDialog" aria-labelledby="addKnowledgeTitle">
   <div class="knowledge-dialog-head"><h2 id="addKnowledgeTitle">添加知识</h2><button class="dialog-close" id="addKnowledgeClose" aria-label="关闭添加知识">×</button></div>
   <div class="add-tabs" role="tablist" aria-label="添加方式">
@@ -73,7 +93,7 @@
   <div id="addFilePanel" role="tabpanel" aria-labelledby="addFileTab" data-add-panel="file"><p>已有 JSON 题库？直接导入即可开始复习。</p><button class="btn" id="libraryImportBtn">选择题库文件</button><input id="libraryFile" type="file" accept=".json,application/json" hidden></div>
   <div id="addPastePanel" role="tabpanel" aria-labelledby="addPasteTab" data-add-panel="paste" hidden><label for="libraryPasteText">粘贴 JSON 题库内容</label><textarea id="libraryPasteText" placeholder="粘贴 JSON 题库内容"></textarea><button class="btn" id="libraryPasteConfirm">确认添加</button></div>
   <div id="addDocumentPanel" role="tabpanel" aria-labelledby="addDocumentTab" data-add-panel="document" hidden><p>从 PDF、Word 或图片提取知识，再生成题目。确认题目后可导出为复习题库。</p><button class="btn" id="extractBtn">打开资料提取</button></div>
-  <div class="add-category"><label for="addKnowledgeCategory">题库所属模块</label><select id="addKnowledgeCategory"></select><p class="dialog-hint">同 ID 专题会更新，已有复习进度保留。</p></div>
+  <div class="add-category"><label for="addKnowledgeCategory">题库所属模块</label><select id="addKnowledgeCategory"></select><p class="dialog-hint">导入前预览新增、更新和移除；更新题目默认重置进度，勘误可保留。</p></div>
   <p id="libraryStatus" role="status" aria-live="polite"></p>
 </dialog>
 <dialog class="knowledge-dialog" id="modulesDialog" aria-labelledby="modulesTitle">
@@ -179,12 +199,13 @@
           <button class="ex-chip" id="exSubQ" type="button">题库 <span id="exQCount">0</span></button>
           <span class="sp"></span>
           <button class="ex-chip pri" id="exGenKp" type="button">提炼知识点</button>
-          <button class="ex-chip" id="exGenQ" type="button">生成题库</button>
+          <button class="ex-chip" id="exGenQ" type="button">生成题库</button><button class="ex-chip" id="exRetry" type="button">重试当前类型失败批次</button><span id="exCoverage" role="status"></span>
           <button class="ex-chip" id="exConfirmAll" type="button">全部确认</button>
           <button class="ex-chip" id="exExportJson" type="button">导出 JSON</button>
           <button class="ex-chip" id="exExportCsv" type="button">导出 CSV</button>
           <button class="ex-chip" id="exExportXlsx" type="button">导出 Excel</button>
           <button class="ex-chip" id="exExportLibrary" type="button">导出复习题库</button>
+          <button class="ex-chip pri" id="exAddLibrary" type="button">将已确认题目加入题库</button>
         </div>
         <div class="ex-rules" id="exFileFilter"></div>
         <div id="exResultList"></div>
@@ -201,8 +222,12 @@
 
 
 <script src="assets/data/library.js"></script>
+<script src="assets/js/cloud-config.js"></script>
+<script src="assets/js/knowledge-storage.js"></script>
 <script src="assets/js/library-preferences.js"></script>
 <script src="assets/js/review-engine.js"></script>
+<script src="assets/js/library-model.js"></script>
+<script src="assets/js/question-model.js"></script>
 <script src="assets/js/library.js"></script>
 <script src="assets/js/search.js"></script>
 <script src="assets/js/navigation.js"></script>
@@ -211,9 +236,17 @@
 <script src="assets/js/extract-storage.js"></script>
 <script src="assets/js/extract-parsers.js"></script>
 <script src="assets/js/extract-exports.js"></script>
+<script src="assets/js/extract-generation.js"></script>
 <script src="assets/js/extraction.js"></script>
 <script src="assets/js/knowledge-dialog.js"></script>
+<script src="assets/js/library-manager.js"></script>
 <script src="assets/js/diagrams.js"></script>
 <script src="assets/js/bootstrap.js"></script>
+<script src="assets/vendor/supabase.js"></script>
+<script src="assets/js/cloud-model.js"></script>
+<script src="assets/js/backup-model.js"></script>
+<script src="assets/js/backup.js"></script>
+<script src="assets/js/cloud-sync.js"></script>
+<script src="assets/js/pwa.js"></script>
 </body>
 </html>

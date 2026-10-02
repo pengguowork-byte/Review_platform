@@ -104,9 +104,9 @@ window.extractExports = function (ctx) {
 
   /* ---------------- 事件绑定 ---------------- */
 
-  function exportLibrary() {
+  function buildLibrary() {
     var questions = visibleRows().qs.filter(function (q) { return q.status === '已确认'; });
-    if (!questions.length) { toast('请先确认至少一道题，再导出复习题库', 'bad'); return; }
+    if (!questions.length) throw new Error('请先确认至少一道题');
     var categories = window.KnowledgeLibrary.categories;
     var subjects = st.files.map(function (f) {
       var rows = questions.filter(function (q) { return q.fileId === f.id; });
@@ -115,14 +115,23 @@ window.extractExports = function (ctx) {
         name: f.name,
         categoryId: f.categoryId || categories[0].id,
         questions: rows.map(function (q) {
-          return { id: q.id, question: q.question + (q.options && q.options.length ? '\n' + q.options.join('\n') : ''), answer: q.answer + (q.explanation ? '\n解析：' + q.explanation : '') };
+          return {id:q.id,question:q.question,answer:q.answer,type:q.type||'简答题',options:q.type==='选择题'?(q.options||[]):[],explanation:q.explanation||'',source:f.name+(q.page?' · 第 '+q.page+' 页':'')};
         })
       };
     }).filter(function (s) { return s.questions.length; });
     var used = subjects.map(function (s) { return s.categoryId; });
     var library = { version: 1, categories: categories.filter(function (c) { return used.indexOf(c.id) >= 0; }), subjects: subjects };
+    return library;
+  }
+  function exportLibrary() {
+    var library;
+    try { library = buildLibrary(); } catch (e) { toast(e.message, 'bad'); return; }
     download('复习题库_' + tsName() + '.json', new Blob([JSON.stringify(library, null, 2)], { type: 'application/json' }));
     toast('已导出复习题库，可通过主页“添加知识”加入学习', 'ok');
   }
-return { exportJson, exportCsv, exportXlsx, exportLibrary };
+  function addToLibrary() {
+    try { window.KnowledgeLibrary.importText(JSON.stringify(buildLibrary())); }
+    catch (e) { toast('加入题库失败：' + e.message, 'bad'); }
+  }
+return { exportJson, exportCsv, exportXlsx, exportLibrary, addToLibrary, buildLibrary };
 };

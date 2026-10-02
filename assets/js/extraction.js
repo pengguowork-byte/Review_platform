@@ -311,7 +311,7 @@
   }
   function chunksOfFile(fileId, limit) {
     return st.blocks.filter(function (b) { return b.fileId === fileId; })
-      .slice(0, limit || 30)
+      .slice(0, limit || undefined)
       .map(function (b) { return { pageFrom: b.pageFrom, pageTo: b.pageTo, text: b.text, isOcr: !!b.isOcr }; });
   }
   function charsOf(chunks) {
@@ -341,92 +341,30 @@
   }
 
   /* ---------- 生成 ---------- */
-  async function genKp() {
-    if (st.busy) return;
-    var ids = st.filterFile ? [st.filterFile] : filesWithBlocks();
-    ids = ids.filter(function (id) { return chunksOfFile(id, 1).length; });
-    if (!ids.length) { toast('没有可用的文本块，请先导入并完成提取', 'bad'); return; }
-    st.busy = true;
-    var btn = $('exGenKp');
-    btn.disabled = true;
-    btn.textContent = '提炼中…';
-    var added = 0, failed = 0;
-    try {
-      for (var i = 0; i < ids.length; i++) {
-        var id = ids[i];
-        var chunks = chunksOfFile(id, 30);
-        var est = Math.round(charsOf(chunks) / 1.7);
-        log('提炼知识点：' + fileNameOf(id) + '（' + chunks.length + ' 块 / ' + charsOf(chunks) + ' 字符 / 约 ' + est + ' tokens）');
-        try {
-          var j = await callApi('/api/kpoints', { chunks: chunks });
-          var fresh = j.points.map(function (p) {
-            return Object.assign({}, p, { fileId: id, categoryId: fileById(id).categoryId, status: '待确认', tags: [] });
-          });
-          fresh.forEach(function (p) { st.points.push(p); });
-          if (st.db && fresh.length) await idbPutAll('points', fresh);
-          added += fresh.length;
-          log('→ ' + fileNameOf(id) + ' 新增 ' + fresh.length + ' 个知识点');
-        } catch (e) {
-          failed++;
-          log('知识点生成失败（' + fileNameOf(id) + '）：' + e.message);
-        }
-      }
-    } finally {
-      st.busy = false;
-      btn.disabled = false;
-      btn.textContent = '提炼知识点';
-    }
-    switchTab('result');
-    renderResult();
-    toast(added ? ('新增 ' + added + ' 个知识点' + (failed ? '，' + failed + ' 个文件失败' : '')) : '知识点生成失败，详见提取日志', added ? 'ok' : 'bad');
+  var failedJobs = [];
+  async function generate(kind,retry) {
+    if(st.busy)return;
+    var jobs=retry?failedJobs.filter(function(j){return j.kind===kind;}):(st.filterFile?[st.filterFile]:filesWithBlocks()).map(function(id){return {kind:kind,id:id,blocks:chunksOfFile(id)};}).filter(function(j){return j.blocks.length;});
+    if(!jobs.length){toast('没有可用的文本块或失败批次','bad');return;}
+    st.busy=true;var btn=$(kind==='kp'?'exGenKp':'exGenQ'),added=0,covered=0,total=jobs.reduce(function(n,j){return n+j.blocks.length;},0);
+    failedJobs=failedJobs.filter(function(j){return j.kind!==kind;});btn.disabled=true;
+    try{for(var job of jobs){
+      var collection=kind==='kp'?st.points:st.questions,store=kind==='kp'?'points':'questions';
+      var seen=new Set(collection.filter(function(x){return x.fileId===job.id;}).map(window.ExtractGeneration.key));
+      var result=await window.ExtractGeneration.run(job.blocks,async function(blocks){
+        var pts=st.points.filter(function(p){return p.fileId===job.id&&blocks.some(function(b){return !p.page||(p.page>=b.pageFrom&&p.page<=b.pageTo);});}).slice(0,20);
+        var response=await callApi(kind==='kp'?'/api/kpoints':'/api/qbank',{chunks:blocks,points:pts});return kind==='kp'?response.points:response.questions;
+      },async function(rows,blocks){
+        var fresh=[];rows.forEach(function(row){var key=window.ExtractGeneration.key(row);if(seen.has(key)||fresh.some(function(x){return window.ExtractGeneration.key(x)===key;}))return;fresh.push(Object.assign({},row,{id:(kind==='kp'?'kp-':'q-')+crypto.randomUUID(),fileId:job.id,categoryId:fileById(job.id).categoryId,status:'待确认',tags:[],page:row.page||blocks[0].pageFrom}));});
+        if(st.db&&fresh.length)await idbPutAll(store,fresh);fresh.forEach(function(row){seen.add(window.ExtractGeneration.key(row));});collection.push.apply(collection,fresh);added+=fresh.length;renderResult();
+      },function(progress){btn.textContent='已处理 '+(covered+progress.done)+'/'+total+' 文本块';});
+      covered+=result.done;result.failures.forEach(function(f){failedJobs.push({kind:kind,id:job.id,blocks:f.blocks});log('失败批次：'+fileNameOf(job.id)+' 第 '+f.blocks[0].pageFrom+' 页：'+f.message);});
+    }}finally{st.busy=false;btn.disabled=false;btn.textContent=kind==='kp'?'提炼知识点':'生成题库';}
+    var report='文本覆盖 '+covered+'/'+total+' 块；新增 '+added+' 条；失败 '+failedJobs.filter(function(j){return j.kind===kind;}).length+' 批。';
+    $('exCoverage').textContent=report;log(report);st.sub=kind;switchTab('result');renderResult();toast(report,covered===total?'ok':'bad');
   }
-
-  async function genQ() {
-    if (st.busy) return;
-    var ids = st.filterFile ? [st.filterFile] : filesWithBlocks();
-    ids = ids.filter(function (id) { return chunksOfFile(id, 1).length; });
-    if (!ids.length) { toast('没有可用的文本块，请先导入并完成提取', 'bad'); return; }
-    st.busy = true;
-    var btn = $('exGenQ');
-    btn.disabled = true;
-    btn.textContent = '出题中…';
-    var added = 0, failed = 0;
-    try {
-      for (var i = 0; i < ids.length; i++) {
-        var id = ids[i];
-        var chunks = chunksOfFile(id, 20);
-        var pts = st.points.filter(function (p) { return p.fileId === id; })
-          .sort(function (a, b) { return (b.confidence || 0) - (a.confidence || 0); })
-          .slice(0, 20)
-          .map(function (p) { return { title: p.title, content: p.content }; });
-        log('生成题库：' + fileNameOf(id) + '（' + chunks.length + ' 块 / ' + pts.length + ' 个候选知识点）');
-        try {
-          var j = await callApi('/api/qbank', { chunks: chunks, points: pts });
-          var fresh = j.questions.map(function (q) {
-            // schema 归一：options 一律为数组，仅选择题保留选项
-            return Object.assign({}, q, {
-              fileId: id, categoryId: fileById(id).categoryId, status: '待确认', tags: [],
-              options: q.type === '选择题' && Array.isArray(q.options) ? q.options : []
-            });
-          });
-          fresh.forEach(function (q) { st.questions.push(q); });
-          if (st.db && fresh.length) await idbPutAll('questions', fresh);
-          added += fresh.length;
-          log('→ ' + fileNameOf(id) + ' 新增 ' + fresh.length + ' 道题');
-        } catch (e) {
-          failed++;
-          log('题库生成失败（' + fileNameOf(id) + '）：' + e.message);
-        }
-      }
-    } finally {
-      st.busy = false;
-      btn.disabled = false;
-      btn.textContent = '生成题库';
-    }
-    st.sub = 'q';
-    renderResult();
-    toast(added ? ('新增 ' + added + ' 道题' + (failed ? '，' + failed + ' 个文件失败' : '')) : '题库生成失败，详见提取日志', added ? 'ok' : 'bad');
-  }
+  function genKp(){return generate('kp',false);}
+  function genQ(){return generate('q',false);}
 
   /* ---------- 渲染 ---------- */
   function renderResultCounts() {
@@ -452,9 +390,9 @@
         '<select data-f="type">' + KP_TYPES.map(function (t) {
           return '<option' + (t === p.type ? ' selected' : '') + '>' + t + '</option>';
         }).join('') + '</select>' +
-        '<span class="ex-conf ' + confCls(p.confidence) + '" title="模型置信度">' + Math.round(p.confidence * 100) + '%</span>' +
+        '<span class="ex-conf ' + confCls(p.confidence) + '" title="模型自评信心，不代表准确率；请核对来源原文">自评 ' + Math.round(p.confidence * 100) + '%</span>' +
         '<button class="ex-chip" data-act="status">' + (p.status === '已确认' ? '已确认 ✓' : '待确认') + '</button>' +
-        '<button class="ex-chip" data-act="del">删除</button>' +
+        '<button class="ex-chip" data-act="source">核对来源原文</button><button class="ex-chip" data-act="del">删除</button>' +
       '</div>' +
       '<textarea class="ex-item-body" data-f="content" rows="3" placeholder="知识点内容">' + esc(p.content) + '</textarea>' +
       '<div class="ex-item-foot">' +
@@ -472,9 +410,9 @@
         '<select data-f="type">' + Q_TYPES.map(function (t) {
           return '<option' + (t === q.type ? ' selected' : '') + '>' + t + '</option>';
         }).join('') + '</select>' +
-        '<span class="ex-conf ' + confCls(q.confidence) + '" title="模型置信度">' + Math.round(q.confidence * 100) + '%</span>' +
+        '<span class="ex-conf ' + confCls(q.confidence) + '" title="模型自评信心，不代表准确率；请核对来源原文">自评 ' + Math.round(q.confidence * 100) + '%</span>' +
         '<button class="ex-chip" data-act="status">' + (q.status === '已确认' ? '已确认 ✓' : '待确认') + '</button>' +
-        '<button class="ex-chip" data-act="del">删除</button>' +
+        '<button class="ex-chip" data-act="source">核对来源原文</button><button class="ex-chip" data-act="del">删除</button>' +
       '</div>' +
       '<textarea class="ex-item-body" data-f="question" rows="2" placeholder="题干">' + esc(q.question) + '</textarea>' +
       (q.type === '选择题' ? '<textarea class="ex-item-body" data-f="options" rows="4" placeholder="每行一个选项，共 4 个">' + esc(opts) + '</textarea>' : '') +
@@ -507,6 +445,7 @@
     onEl('exSubQ', 'click', function () { st.sub = 'q'; renderResult(); });
     onEl('exGenKp', 'click', genKp);
     onEl('exGenQ', 'click', genQ);
+    onEl('exRetry', 'click', function(){generate(st.sub,true);});
     onEl('exConfirmAll', 'click', function () {
       var rows = (st.sub === 'kp' ? st.points : st.questions).filter(function (x) { return !st.filterFile || x.fileId === st.filterFile; });
       if (!rows.length) { toast('当前列表为空', 'bad'); return; }
@@ -531,7 +470,7 @@
       var hit = findRow(id);
       if (!hit) return;
       var act = btn.getAttribute('data-act');
-      if (act === 'status') {
+      if(act==='source'){var d=document.getElementById('extractSourceDialog');if(!d){d=document.createElement('dialog');d.id='extractSourceDialog';d.className='knowledge-dialog';d.setAttribute('aria-label','来源原文');var h=document.createElement('h2');h.textContent='来源原文';var close=document.createElement('button');close.textContent='关闭';close.onclick=function(){d.close();};var text=document.createElement('pre');text.id='extractSourceText';text.style.whiteSpace='pre-wrap';d.append(h,close,text);document.body.append(d);}var blocks=st.blocks.filter(function(b){return b.fileId===hit.row.fileId&&(!hit.row.page||(hit.row.page>=b.pageFrom&&hit.row.page<=b.pageTo));});document.getElementById('extractSourceText').textContent=fileNameOf(hit.row.fileId)+' · 模型自评不代表准确率，请核对原文（OCR 文本仍可能有识别误差）\n\n'+(blocks.map(function(b){return '第 '+b.pageFrom+'–'+b.pageTo+' 页\n'+b.text;}).join('\n\n')||'该页没有可用的提取文本，请在原始资料中核对。');d.showModal();}else if (act === 'status') {
         hit.row.status = hit.row.status === '已确认' ? '待确认' : '已确认';
         persistRow(hit.store, hit.row);
         renderResult();
@@ -571,6 +510,7 @@
     onEl('exExportCsv', 'click', exportCsv);
     onEl('exExportXlsx', 'click', exportXlsx);
     onEl('exExportLibrary', 'click', extractExports.exportLibrary);
+    onEl('exAddLibrary', 'click', extractExports.addToLibrary);
   }
 
   /* ---------- 导出 ---------- */

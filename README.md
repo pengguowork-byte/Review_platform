@@ -1,6 +1,10 @@
 # 知识复习工作台
 
+当前版本标识：3.0.0。快速开始见 [使用说明](使用说明.md)，详细操作见 [使用教程](docs/使用教程.md)，版本变更见 [CHANGELOG](CHANGELOG.md)。
+
 本版本将原来的嵌入式单页复习系统改为可扩展的多领域知识复习应用。内置 296 道原题，支持分类、专题筛选、搜索、间隔复习、AI 自测、资料提取和自定义题库导入。
+
+现已增加可选的 PWA + Supabase 云同步代码，同步自定义题库、复习进度和模块配置；原始资料留在本地。创建免费项目、执行 SQL、配置公开客户端参数并部署后才能开启真实同步。完整步骤见 [免费托管与云同步](docs/免费托管与云同步.md)。静态构建命令为 `node scripts/build-cloud.cjs`，部署目录为 `dist/`；完整测试使用 `node --test tests/*.test.cjs`。静态托管版本不包含本地 Node AI 接口。
 
 ## 使用
 
@@ -14,7 +18,7 @@ Windows 双击 `启动.cmd`。也可执行 `runtime\node.exe server.js 8000`，�
 
 ## 开发
 
-从 Git 获取的源码不包含 `runtime/node.exe` 或 API Key。先安装 Node.js 18+（推荐使用受支持的 LTS 版本），在工程目录执行 `node scripts/build.cjs`、`node --test tests/core.test.cjs`，再运行 `node server.js 8000`。Windows 的 `启动.cmd` 在没有包内运行时时会使用系统 Node。
+从 Git 获取的源码不包含 `runtime/node.exe` 或 API Key。先安装 Node.js 18+（推荐使用受支持的 LTS 版本），在工程目录执行 `node scripts/build.cjs`、`node --test tests/core.test.cjs tests/cloud.test.cjs tests/features.test.cjs`，再运行 `node server.js 8000`。Windows 的 `启动.cmd` 在没有包内运行时时会使用系统 Node。
 
 需要 AI 功能时，将 `deepseek.key.example` 复制为 `deepseek.key` 并填写自己的 Key，或配置 `DEEPSEEK_API_KEY`。`.gitignore` 已排除密钥、运行时、服务器状态和本地测试截图，不应强制加入版本库。
 
@@ -22,12 +26,12 @@ Windows 双击 `启动.cmd`。也可执行 `runtime\node.exe server.js 8000`，�
 
 ```powershell
 runtime\node.exe scripts\build.cjs
-runtime\node.exe --test tests\core.test.cjs
+runtime\node.exe --test tests\core.test.cjs tests\cloud.test.cjs tests\features.test.cjs
 ```
 
 修改 HTML 外壳或内置题库后运行 build；修改 CSS / JS 后刷新页面即可。无需 npm install。`assets/data/library.js` 及兼容 HTML 为生成文件，不应直接维护。
 
-详见 `docs/开发与架构.md`。之前的使用说明、部署说明与测试用例描述的是旧版；涉及入口、分类、网络监听与毕业规则时，以本 README 和开发文档为准。
+详见 `docs/开发与架构.md`。使用说明、部署说明和测试用例已更新到当前版本；旧版原文保存在 docs/history/v2.0.2，仅供历史参考。
 
 ## 添加其他知识
 
@@ -35,8 +39,18 @@ runtime\node.exe --test tests\core.test.cjs
 
 标题下方只显示最近使用的最多五个模块（“全部知识”是总览入口）。通过“全部模块 / 管理”访问其他模块、新建模块或修改模块名称。模块选择、专题选择、题目交互、侧栏跳转和导入题库都会更新最近使用顺序，记录保存在当前浏览器中。重命名只改变显示名称，不改变模块 ID 或复习进度。
 
-资料提取页面可选择所属知识模块。确认 AI 生成的题目后，“导出复习题库”生成可通过“添加知识”导入的格式。原文件在浏览器本地解析，生成知识点 / 题库时，提取文本会发送到配置的 AI 服务。
+资料提取页面可选择所属知识模块。确认 AI 生成的题目后，可直接加入题库，或通过“导出复习题库”生成可导入的文件。原文件在浏览器本地解析，生成知识点 / 题库时，提取文本会发送到配置的 AI 服务。
 
 ## 封装方向
 
 目前保留模块化 HTML / CSS / JavaScript + Node 本地服务，便于调试、浏览器访问和将来复用。需要独立窗口、安装包、托盘或自动更新时，建议优先评估 Electron；现有 Node 后端更容易复用。若以后更关注安装包体积，并愿意增加 Rust 与平台 WebView 的适配工作，可以考虑 Tauri。本次没有安装桌面框架或生成桌面安装包。
+
+## 本轮功能完善
+
+题库导入先显示新增、更新和移除预览。通过“题库管理”编辑自定义题目、增删题目、移动专题或导出；修改内容默认重置对应学习状态，单纯勘误可勾选保留。选择题和填空题支持无需 AI 的本地作答、解析查看与重新练习。
+
+“全部模块 / 管理”可以自命名并设置不同知识类型的复习策略。手机端通过“目录与学习统计”打开侧栏；最近模块最多显示五个，以使用时间合并。
+
+“备份与恢复”导出自定义题库、学习记录和模块配置，支持选择 JSON 文件或粘贴完整备份，预览后合并或替换，也可撤销上次恢复。不包含原始 PDF、图片或密钥。原有“导出进度 / 导入进度”继续用于只迁移学习记录。
+
+PWA 已安装时，修改脚本后可能需点击“更新应用版本”切换缓存版本；云端内容应用与应用版本更新为不同入口。功能验收与限制见 [功能完善验收](docs/功能完善验收.md)，最终自动回归 38 项通过。

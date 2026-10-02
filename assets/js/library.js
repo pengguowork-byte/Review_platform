@@ -5,7 +5,7 @@
   var PREF_KEY = 'knowledge-library-preferences-v1';
   var prefs = window.LibraryPreferences.normalize({});
   var hadPreferences = false;
-  try { var storedPreferences = localStorage.getItem(PREF_KEY); hadPreferences = !!storedPreferences; if (storedPreferences) prefs = window.LibraryPreferences.normalize(JSON.parse(storedPreferences)); } catch (e) {}
+  try { var storedPreferences = window.KnowledgeStorage.getItem(PREF_KEY); hadPreferences = !!storedPreferences; if (storedPreferences) prefs = window.LibraryPreferences.normalize(JSON.parse(storedPreferences)); } catch (e) {}
   var selectedCategory = '', selectedSubject = '';
   function element(tag, cls, text) {
     var el = document.createElement(tag);
@@ -13,32 +13,9 @@
     if (text != null) el.textContent = text;
     return el;
   }
-  function validate(input) {
-    if (!input || input.version !== 1 || !Array.isArray(input.categories) || !Array.isArray(input.subjects)) throw new Error('题库需包含 version:1、categories 和 subjects 数组');
-    if (input.categories.length > 100 || input.subjects.length > 100) throw new Error('单次导入最多 100 个类型或专题');
-    var categories = [], subjects = [], ids = new Set();
-    input.categories.forEach(function (c) {
-      if (!c || !/^[a-z][a-z0-9-]{0,63}$/.test(c.id) || typeof c.name !== 'string' || !c.name.trim() || ids.has(c.id)) throw new Error('知识类型 ID 或名称无效 / 重复');
-      ids.add(c.id); categories.push({ id: c.id, name: c.name.trim().slice(0, 60) });
-    });
-    var categoryIds = new Set(base.categories.concat(prefs.categories, categories).map(function (c) { return c.id; }));
-    ids = new Set(); var count = 0;
-    input.subjects.forEach(function (s) {
-      if (!s || !/^[a-z][a-z0-9-]{0,63}$/.test(s.id) || ids.has(s.id) || base.subjects.some(function (b) { return b.id === s.id; })) throw new Error('专题 ID 无效 / 重复 / 与内置专题冲突');
-      if (typeof s.name !== 'string' || !s.name.trim() || !categoryIds.has(s.categoryId) || !Array.isArray(s.questions) || !s.questions.length) throw new Error('专题需要名称、有效 categoryId 和非空 questions');
-      ids.add(s.id); var qids = new Set();
-      var questions = s.questions.map(function (q) {
-        if (!q || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(q.id) || qids.has(q.id) || typeof q.question !== 'string' || !q.question.trim() || typeof q.answer !== 'string' || !q.answer.trim()) throw new Error('题目需要唯一 ID、非空 question 和 answer');
-        qids.add(q.id); count++;
-        return { id: q.id, question: q.question.slice(0, 2000), answer: q.answer.slice(0, 20000), gist: String(q.gist || '').slice(0, 2000) };
-      });
-      subjects.push({ id: s.id, name: s.name.trim().slice(0, 60), categoryId: s.categoryId, questions: questions });
-    });
-    if (!subjects.length || count > 2000) throw new Error('题库需有题目，单次最多 2000 道');
-    return { version: 1, categories: categories, subjects: subjects };
-  }
+  function validate(input) { return window.LibraryModel.validate(input, base, prefs); }
   var custom = { version: 1, categories: [], subjects: [] };
-  try { var saved = localStorage.getItem(CUSTOM_KEY); if (saved) custom = validate(JSON.parse(saved)); }
+  try { var saved = window.KnowledgeStorage.getItem(CUSTOM_KEY); if (saved) custom = validate(JSON.parse(saved)); }
   catch (e) { document.getElementById('libraryStatus').textContent = '自定义题库读取失败：' + e.message; }
   var categories = base.categories.slice();
   custom.categories.forEach(function (c) { if (!categories.some(function (x) { return x.id === c.id; })) categories.push(c); });
@@ -49,7 +26,7 @@
   var initialSubject = subjects.find(function (s) { return location.hash === '#' + s.id; });
   if (initialSubject) selectedSubject = initialSubject.id;
   var main = document.querySelector('main'), aside = document.querySelector('aside');
-  subjects.forEach(function (subject) {
+  function renderSubject(subject) {
     var fragment = document.createDocumentFragment(), nav = document.createDocumentFragment();
     if (subject.contentHtml) {
       var template = document.createElement('template'); template.innerHTML = subject.contentHtml;
@@ -65,7 +42,15 @@
         var head = element('div', 'q-head'); head.appendChild(element('span', 'q-idx', String(i + 1))); head.appendChild(element('span', 'q-title', q.question));
         var content = element('div', 'q-body');
         if (q.gist) { var gist = element('div', 'gist'); gist.appendChild(element('span', 'lbl', '一句话')); gist.appendChild(document.createTextNode(q.gist)); content.appendChild(gist); }
-        var details = element('details'); details.id = card.id + '-answer'; details.appendChild(element('summary', '', '展开参考答案')); details.appendChild(element('div', 'plain-answer', q.answer)); content.appendChild(details);
+        if(q.type==='选择题'||q.type==='填空题'){
+          var form=element('form','local-question'),result=element('p');result.setAttribute('role','status');
+          form.append(element('p','',q.type==='填空题'?'填写答案；按文字匹配，多个正确答案用 | 分隔。':'选择正确答案，再提交核对。'));
+          if(q.type==='选择题'){(q.options||[]).forEach(function(option,index){var label=element('label'),input=element('input');input.type='radio';input.name='answer';input.value=String.fromCharCode(65+index);label.append(input,document.createTextNode(input.value+'. '+option.replace(/^[A-H][.、．)）]\s*/,'')));form.append(label);});}
+          else{var input=element('input');input.name='answer';input.setAttribute('aria-label','填空作答 '+q.question);form.append(input);}
+          var submit=element('button','sync-btn','提交作答'),retry=element('button','sync-btn','已回顾答案，重新练习');submit.type='submit';retry.type='button';retry.hidden=true;retry.onclick=function(){form.reset();details.open=false;submit.disabled=false;retry.hidden=true;result.textContent='';};form.append(submit,retry,result);
+          form.addEventListener('submit',function(e){e.preventDefault();try{var correct=window.QuestionModel.grade(q,new FormData(form).get('answer'));result.textContent=correct?'回答正确，记为熟练；可继续复习巩固。':'回答有误，已记为忘记了，请回顾参考答案。';details.open=true;submit.disabled=true;retry.hidden=false;document.dispatchEvent(new CustomEvent('knowledge-local-verdict',{detail:{cid:card.id,correct:correct}}));}catch(err){result.textContent=err.message;}});content.append(form);
+        }
+        var details = element('details'); details.id = card.id + '-answer'; details.appendChild(element('summary', '', '展开参考答案')); details.appendChild(element('div', 'plain-answer', q.answer)); if(q.explanation)details.appendChild(element('div','plain-answer','解析：'+q.explanation));if(q.source)details.appendChild(element('p','source-reference','来源：'+q.source));content.appendChild(details);
         head.addEventListener('click', function (e) { if (!e.target.closest('button,.q-lvl,.quiz-wrap')) details.open = !details.open; });
         card.appendChild(head); card.appendChild(content); fragment.appendChild(card);
         var li = element('li'), link = element('a', '', (i + 1) + '. ' + q.question); link.href = '#' + card.id; li.appendChild(link); list.appendChild(li);
@@ -74,7 +59,8 @@
     Array.from(fragment.children).forEach(function (el) { el.dataset.subject = subject.id; el.dataset.category = subject.categoryId; });
     Array.from(nav.children).forEach(function (el) { el.dataset.subject = subject.id; el.dataset.category = subject.categoryId; });
     main.appendChild(fragment); aside.appendChild(nav);
-  });
+  }
+  subjects.forEach(renderSubject);
   var empty = element('div', 'library-empty', '此知识模块还没有题目。点击“添加知识”加入你的学习资料。'); empty.id = 'libraryEmpty'; main.appendChild(empty);
   function matches(card) { return (!selectedCategory || card.dataset.category === selectedCategory) && (!selectedSubject || card.dataset.subject === selectedSubject); }
   function updateSubjects() {
@@ -83,7 +69,7 @@
     select.value = selectedSubject;
   }
   var tabs = document.getElementById('categoryTabs');
-  function savePreferences() { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }
+  function savePreferences() { window.KnowledgeStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }
   function remember(id) {
     if (!id || !categories.some(function (c) { return c.id === id; })) return;
     window.LibraryPreferences.touch(prefs, id);
@@ -107,13 +93,13 @@
   // First upgrade: infer actual past use from existing card histories.
   if (!hadPreferences) {
     try {
-      var progress = JSON.parse(localStorage.getItem('eb-review-system-v1') || '{"cards":{}}');
+      var progress = JSON.parse(window.KnowledgeStorage.getItem('eb-review-system-v1') || '{"cards":{}}');
       var lastUse = {};
       Object.keys(progress.cards || {}).forEach(function (id) {
         var card = document.getElementById(id); if (!card) return;
         (progress.cards[id].history || []).forEach(function (event) { if (Number.isFinite(event.ts)) lastUse[card.dataset.category] = Math.max(lastUse[card.dataset.category] || 0, event.ts); });
       });
-      prefs.recent = Object.keys(lastUse).sort(function (a,b) { return lastUse[b] - lastUse[a]; }).slice(0,5);
+      prefs.lastUsed=lastUse; prefs.recent = Object.keys(lastUse).sort(function (a,b) { return lastUse[b] - lastUse[a]; }).slice(0,5);
     } catch (e) {}
   }
   if (initialSubject) remember(initialSubject.categoryId);
@@ -133,21 +119,36 @@
   updateSubjects();
   function renderSummary() { document.getElementById('librarySummary').textContent = categories.length + ' 个知识模块 · ' + subjects.length + ' 个专题 · ' + main.querySelectorAll('.q').length + ' 道题。'; }
   renderSummary();
-  window.KnowledgeLibrary = { matches: matches, categories: categories, subjects: subjects, validate: validate, importText: importLibrary, getCategory: function () { return selectedCategory; } };
+  window.KnowledgeLibrary = { matches: matches, categories: categories, subjects: subjects, validate: validate, importText: importLibrary, getStrategy:function(id){return prefs.strategies[id]||'default';}, getCategory: function () { return selectedCategory; }, getCustom:function(){return JSON.parse(window.KnowledgeStorage.getItem(CUSTOM_KEY)||'{"version":1,"categories":[],"subjects":[]}');}, saveCustom:saveCustom };
+  window.KnowledgeLibrary.refresh=function(){
+    var nextPrefs=window.LibraryPreferences.normalize(JSON.parse(window.KnowledgeStorage.getItem(PREF_KEY)||'{}'));
+    var next=window.LibraryModel.validate(window.KnowledgeLibrary.getCustom(),base,nextPrefs);
+    var oldSubjects=new Map(custom.subjects.map(function(s){return [s.id,JSON.stringify(s)];}));
+    var nextSubjects=new Map(next.subjects.map(function(s){return [s.id,JSON.stringify(s)];}));
+    Array.from(main.querySelectorAll('[data-subject]')).concat(Array.from(aside.querySelectorAll('[data-subject]'))).forEach(function(node){var id=node.dataset.subject;if(oldSubjects.has(id)&&oldSubjects.get(id)!==nextSubjects.get(id))node.remove();});
+    next.subjects.forEach(function(subject){if(oldSubjects.get(subject.id)!==JSON.stringify(subject))renderSubject(subject);});
+    custom=next;prefs=nextPrefs;subjects.splice.apply(subjects,[0,subjects.length].concat(base.subjects,custom.subjects));
+    categories.splice.apply(categories,[0,categories.length].concat(base.categories.map(function(c){return Object.assign({},c);})));custom.categories.concat(prefs.categories).forEach(function(c){if(!categories.some(function(old){return old.id===c.id;}))categories.push(Object.assign({},c));});
+    categories.forEach(function(c){if(prefs.names[c.id])c.name=prefs.names[c.id];});prefs.recent=prefs.recent.filter(function(id){return categories.some(function(c){return c.id===id;});});
+    if(!subjects.some(function(s){return s.id===selectedSubject;}))selectedSubject='';if(!categories.some(function(c){return c.id===selectedCategory;}))selectedCategory='';
+    updateSubjects();renderRecent();renderModules();renderSummary();document.dispatchEvent(new CustomEvent('knowledge-library-rendered'));document.dispatchEvent(new CustomEvent('knowledge-names-change'));document.dispatchEvent(new CustomEvent('knowledge-filter-change'));
+  };
+  function saveCustom(bank,resetIds){
+    bank=validate(bank);var progress=JSON.parse(window.KnowledgeStorage.getItem('eb-review-system-v1')||'{"cards":{}}');
+    var undo={library:window.KnowledgeLibrary.getCustom(),progress:progress};progress=JSON.parse(JSON.stringify(progress));
+    (resetIds||[]).forEach(function(id){if(progress.cards[id])window.ReviewEngine.apply(progress.cards[id],null,null,null,true,Date.now(),{id:crypto.randomUUID(),fullHistory:!!window.KnowledgeStorage.account});});
+    var writes={};writes[CUSTOM_KEY]=JSON.stringify(bank);writes['eb-review-system-v1']=JSON.stringify(progress);writes['knowledge-library-undo']=JSON.stringify(undo);window.KnowledgeStorage.batch(writes);
+    location.reload();
+  }
   function importLibrary(text, targetCategory) {
-    var incoming = validate(JSON.parse(text.replace(/^\uFEFF/, '')));
+    var incoming = validate(JSON.parse(text.replace(/^\uFEFF/, '')));if(!incoming.subjects.length)throw new Error('导入题库需要至少一个非空专题');
     if (targetCategory) {
       var target = categories.find(function (c) { return c.id === targetCategory; });
       if (!target) throw new Error('所选知识模块不存在');
       incoming.subjects.forEach(function (s) { s.categoryId = target.id; });
       if (!incoming.categories.some(function (c) { return c.id === target.id; })) incoming.categories.push({ id:target.id, name:target.name });
     }
-    var combined = { version: 1, categories: custom.categories.slice(), subjects: custom.subjects.slice() };
-    incoming.categories.forEach(function (c) { var i = combined.categories.findIndex(function (x) { return x.id === c.id; }); if (i >= 0) combined.categories[i] = c; else combined.categories.push(c); });
-    incoming.subjects.forEach(function (s) { var i = combined.subjects.findIndex(function (x) { return x.id === s.id; }); if (i >= 0) combined.subjects[i] = s; else combined.subjects.push(s); });
-    validate(combined); localStorage.setItem(CUSTOM_KEY, JSON.stringify(combined));
-    incoming.subjects.slice().reverse().forEach(function (s) { remember(s.categoryId); });
-    location.reload();
+    document.dispatchEvent(new CustomEvent('knowledge-import-preview',{detail:incoming}));
   }
   var modulesDialog = document.getElementById('modulesDialog'), editingId = null;
   var nameForm = document.getElementById('moduleNameForm'), nameInput = document.getElementById('moduleNameInput');
@@ -166,7 +167,8 @@
       choose.addEventListener('click', function () { chooseCategory(category.id); modulesDialog.close(); });
       var rename = element('button', 'module-rename', '重命名'); rename.type = 'button'; rename.setAttribute('aria-label', '重命名' + category.name);
       rename.addEventListener('click', function () { editName(category.id); });
-      row.appendChild(choose); row.appendChild(rename); list.appendChild(row);
+      var strategy=element('select');strategy.setAttribute('aria-label','复习策略 '+category.name);[['default','通用复述'],['language','语言记忆：短间隔、回忆词义与例句'],['concept','概念理解：解释原理与关联'],['practice','推导应用：步骤、条件与练习']].forEach(function(v){strategy.add(new Option(v[1],v[0]));});strategy.value=prefs.strategies[category.id]||'default';strategy.addEventListener('change',function(){var next=window.LibraryPreferences.normalize(prefs);next.strategies=Object.assign({},next.strategies);next.strategies[category.id]=strategy.value;try{window.KnowledgeStorage.setItem(PREF_KEY,JSON.stringify(next));prefs=next;document.getElementById('moduleStatus').textContent='策略已保存，从下一次复习开始使用。';}catch(e){document.getElementById('moduleStatus').textContent=e.message;}});
+      row.appendChild(choose);row.appendChild(strategy); row.appendChild(rename); list.appendChild(row);
     });
   }
   document.getElementById('manageModulesBtn').addEventListener('click', function () { closeNameForm(); renderModules(); document.getElementById('moduleStatus').textContent = ''; modulesDialog.showModal(); });
@@ -183,7 +185,7 @@
       var id = editingId || 'module-' + Date.now().toString(36);
       if (editingId) next.names[id] = name;
       else next.categories.push({ id:id, name:name });
-      localStorage.setItem(PREF_KEY, JSON.stringify(next)); prefs = next;
+      window.KnowledgeStorage.setItem(PREF_KEY, JSON.stringify(next)); prefs = next;
       if (editingId) categories.find(function (c) { return c.id === id; }).name = name;
       else categories.push({ id:id, name:name });
       closeNameForm(); renderModules(); renderRecent(); renderSummary();

@@ -18,6 +18,9 @@
 *.tmp
 *.bak
 /coverage/
+/dist/
+/.wrangler/
+/docs/云同步页面预览.png
 /test-results/
 /playwright-report/
 

@@ -87,6 +87,7 @@
 
   window.KnowledgeView = { refresh: function () { return filter(input.value); } };
   document.addEventListener('knowledge-filter-change', window.KnowledgeView.refresh);
+  document.addEventListener('knowledge-library-rendered',function(){cards=Array.from(document.querySelectorAll('main .q'));filter(input.value);});
   input.addEventListener('input', function () { filter(input.value); });
 
   toggleBtn.addEventListener('click', function () {

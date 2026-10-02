@@ -9,7 +9,7 @@ module.exports = function serveStatic(req, res, pathname, root) {
     res.writeHead(302, { Location: '/' + encodeURIComponent('嵌入式校招八股_总览.html') }); res.end(); return;
   }
   const name = pathname === '/' ? 'index.html' : pathname.slice(1);
-  const allowed = name === 'index.html' || (name.startsWith('assets/') && ['.js', '.css', '.png', '.jpg', '.svg', '.ico'].includes(path.extname(name))) || (name.startsWith('data/') && path.extname(name) === '.json') || (!name.includes('/') && !name.includes('\\') && name.endsWith('.html'));
+  const allowed = ['index.html', 'sw.js', 'manifest.webmanifest'].includes(name) || (name.startsWith('assets/') && ['.js', '.css', '.png', '.jpg', '.svg', '.ico'].includes(path.extname(name))) || (name.startsWith('data/') && path.extname(name) === '.json') || (!name.includes('/') && !name.includes('\\') && name.endsWith('.html'));
   const abs = path.resolve(root, name);
   const relative = path.relative(root, abs);
   if (!allowed || relative.startsWith('..') || path.isAbsolute(relative) || name.includes('\\') || name.split('/').some(part => part.startsWith('.'))) {
@@ -17,7 +17,7 @@ module.exports = function serveStatic(req, res, pathname, root) {
   }
   fs.stat(abs, (err, stat) => {
     if (err || !stat.isFile()) { send(res, 404, { error: 'not found' }); return; }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(abs)] || 'application/octet-stream', 'Content-Length': stat.size, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
+    res.writeHead(200, { 'Content-Type': name === 'manifest.webmanifest' ? 'application/manifest+json' : MIME[path.extname(abs)] || 'application/octet-stream', 'Content-Length': stat.size, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
     if (req.method === 'HEAD') { res.end(); return; }
     fs.createReadStream(abs).on('error', () => res.destroy()).pipe(res);
   });

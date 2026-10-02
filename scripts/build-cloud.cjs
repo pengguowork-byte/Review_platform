@@ -1,0 +1,32 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const root = path.resolve(__dirname, '..');
+require('./build.cjs');
+const config = { url:process.env.SUPABASE_URL || '', publishableKey:process.env.SUPABASE_PUBLISHABLE_KEY || '' };
+if (config.url || config.publishableKey) {
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(config.url)) throw new Error('Use a Supabase project HTTPS URL');
+  const key = config.publishableKey;
+  let anon = false;
+  try { anon = JSON.parse(Buffer.from(key.split('.')[1], 'base64url')).role === 'anon'; } catch (_) {}
+  if (!key.startsWith('sb_publishable_') && !anon) throw new Error('Only publishable or anon keys may be deployed; secret/service_role keys are forbidden');
+} else console.log('No public Supabase config supplied; deployment will run in local-only mode.');
+const output = path.join(root, 'dist');
+if (path.dirname(output) !== root || path.basename(output) !== 'dist') throw new Error('Invalid output path');
+fs.rmSync(output, { recursive:true, force:true });
+fs.mkdirSync(output);
+fs.cpSync(path.join(root, 'assets'), path.join(output, 'assets'), { recursive:true, filter:source => fs.statSync(source).isDirectory() || ['.js','.css','.png','.jpg','.svg','.ico','.LICENSE'].includes(path.extname(source)) });
+for (const name of ['index.html', '嵌入式校招八股_总览.html', 'manifest.webmanifest']) fs.copyFileSync(path.join(root, name), path.join(output, name));
+fs.writeFileSync(path.join(output, 'assets/js/cloud-config.js'), 'window.KNOWLEDGE_CLOUD_CONFIG = ' + JSON.stringify(config) + ';\n');
+const walk = dir => fs.readdirSync(dir, { withFileTypes:true }).flatMap(entry => entry.isDirectory() ? walk(path.join(dir, entry.name)) : [path.join(dir, entry.name)]);
+const files = walk(output).map(file => '/' + path.relative(output, file).split(path.sep).join('/')).filter(file => !file.endsWith('.LICENSE'));
+const hash = crypto.createHash('sha256');
+for (const name of files) hash.update(fs.readFileSync(path.join(output, name.slice(1))));
+const template = fs.readFileSync(path.join(root, 'scripts/sw-template.js'), 'utf8');
+const worker = template.replace('__CACHE_VERSION__', hash.digest('hex').slice(0,16)).replace('__PRECACHE_FILES__', JSON.stringify(files));
+fs.writeFileSync(path.join(root, 'sw.js'), worker);
+fs.writeFileSync(path.join(output, 'sw.js'), worker);
+fs.writeFileSync(path.join(output, '_headers'), '/sw.js\n  Cache-Control: no-cache\n/assets/js/cloud-config.js\n  Cache-Control: no-cache\n/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n');
+fs.writeFileSync(path.join(output, '404.html'), '<!doctype html><meta charset="utf-8"><title>未找到页面</title><p>未找到页面。<a href="/">返回知识复习工作台</a></p>');
+console.log('Static deployment ready: dist/ (no backend keys, originals, archives or runtime).');
