@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "programming",
+      "name": "编程语言"
+    },
+    {
+      "id": "fundamentals",
+      "name": "计算机基础"
+    },
+    {
+      "id": "embedded",
+      "name": "嵌入式与硬件"
+    },
+    {
+      "id": "robotics",
+      "name": "机器人"
+    },
+    {
+      "id": "languages",
+      "name": "语言学习"
+    },
+    {
+      "id": "science",
+      "name": "数学与科学"
+    },
+    {
+      "id": "humanities",
+      "name": "人文与社会"
+    }
+  ],
+  "subjects": [
+    {
+      "id": "cpp",
+      "name": "C++",
+      "categoryId": "programming",
+      "source": "data/subjects/cpp.json"
+    },
+    {
+      "id": "os",
+      "name": "操作系统",
+      "categoryId": "fundamentals",
+      "source": "data/subjects/os.json"
+    },
+    {
+      "id": "net",
+      "name": "计算机网络",
+      "categoryId": "fundamentals",
+      "source": "data/subjects/net.json"
+    },
+    {
+      "id": "rtos",
+      "name": "FreeRTOS",
+      "categoryId": "embedded",
+      "source": "data/subjects/rtos.json"
+    },
+    {
+      "id": "stm32",
+      "name": "STM32",
+      "categoryId": "embedded",
+      "source": "data/subjects/stm32.json"
+    },
+    {
+      "id": "ros",
+      "name": "ROS",
+      "categoryId": "robotics",
+      "source": "data/subjects/ros.json"
+    }
+  ]
+}

@@ -1,0 +1,2961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C++ · 嵌入式校招八股（精简重构版）</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#ffffff; --border:#e3e8ef; --text:#1f2937; --muted:#6b7280;
+    --accent:#2563eb; --accent-soft:#eef4ff; --h1:#0f172a;
+    --star5:#dc2626; --star4:#ea580c; --star3:#ca8a04; --star2:#16a34a; --star1:#64748b;
+    --codebg:#0f172a; --codetext:#e2e8f0;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;}
+  a{color:var(--accent);text-decoration:none;}
+
+  /* 布局 */
+  .layout{display:flex;}
+  aside{
+    width:300px;min-width:300px;height:100vh;position:sticky;top:0;overflow-y:auto;
+    background:#0f172a;color:#cbd5e1;padding:20px 14px;font-size:13px;
+  }
+  aside h2{color:#fff;font-size:15px;margin:0 0 12px;letter-spacing:1px;}
+  aside .note{font-size:11px;color:#64748b;margin-bottom:16px;line-height:1.5;}
+  aside .sec{margin:10px 0 4px;font-weight:700;color:#93c5fd;font-size:13px;cursor:pointer;}
+  aside .sec:hover{color:#bfdbfe;}
+  aside ul{list-style:none;margin:0;padding:0 0 0 8px;border-left:1px solid #1e293b;}
+  aside li a{display:block;padding:4px 8px;color:#94a3b8;border-radius:4px;transition:.15s;}
+  aside li a:hover{color:#fff;background:#1e293b;}
+  aside li a .st{opacity:.7;font-size:11px;}
+
+  main{flex:1;padding:28px 36px;max-width:960px;}
+  .topbar{margin-bottom:20px;}
+  .topbar h1{font-size:22px;color:var(--h1);margin:0 0 6px;}
+  .topbar p{color:var(--muted);font-size:13px;margin:0;}
+
+  /* 卡片 */
+  .q{background:var(--card);border:1px solid var(--border);border-radius:10px;margin:14px 0;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+  .q-head{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:#fbfcfe;}
+  .q-head:hover{background:#f6f8fb;}
+  .q-idx{color:var(--muted);font-size:12px;font-weight:600;min-width:22px;}
+  .q-title{font-weight:600;flex:1;font-size:15px;}
+  .stars{font-size:13px;white-space:nowrap;letter-spacing:1px;}
+  .stars.st5{color:var(--star5);} .stars.st4{color:var(--star4);} .stars.st3{color:var(--star3);}
+  .stars.st2{color:var(--star2);} .stars.st1{color:var(--star1);}
+
+  .q-body{padding:4px 16px 16px;border-top:1px solid var(--border);}
+  /* 一句话结论 */
+  .gist{margin:12px 0 4px;padding:10px 14px;background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:6px;font-weight:600;color:#1e3a8a;}
+  .gist .lbl{display:inline-block;font-size:11px;color:var(--accent);font-weight:700;margin-right:6px;letter-spacing:1px;}
+
+  details{border-top:1px dashed var(--border);margin-top:8px;padding-top:8px;}
+  summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600;user-select:none;outline:none;}
+  summary:hover{color:var(--accent);}
+  details[open] summary{margin-bottom:8px;}
+
+  h3.detail{font-size:13px;color:var(--h1);margin:14px 0 6px;border-left:3px solid var(--accent);padding-left:8px;}
+  ul,ol{margin:6px 0;padding-left:22px;}
+  li{margin:3px 0;}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px;}
+  th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top;}
+  th{background:#f1f5f9;font-weight:600;}
+  tr:nth-child(even) td{background:#fafbfc;}
+  code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-family:"JetBrains Mono",Consolas,monospace;font-size:12.5px;color:#b91c1c;}
+  pre{background:var(--codebg);color:var(--codetext);padding:14px 16px;border-radius:8px;overflow-x:auto;font-size:12.5px;line-height:1.6;}
+  pre code{background:none;color:inherit;padding:0;}
+  .tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;background:#f1f5f9;color:var(--muted);margin:2px 3px 2px 0;}
+  .tag.hot{background:#fee2e2;color:#b91c1c;}
+  .mermaid{background:#fff;padding:10px;border-radius:8px;border:1px solid var(--border);margin:10px 0;text-align:center;}
+  .warn{font-size:11px;color:var(--muted);margin:0 0 4px;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <h2>C++ · 八股</h2>
+    <div class="note">精简重构版 · 分层式<br>一句话结论 → 展开详情<br><span style="color:#dc2626">★</span> 越多越重要</div>
+
+    <div class="sec" data-sec="s20">2.0 基础</div>
+    <ul id="s20-list">
+      <li><a href="#q1">1. 如何学习 C++ <span class="st">★★★</span></a></li>
+      <li><a href="#q2">2. 结构体内存对齐 <span class="st">★★★</span></a></li>
+      <li><a href="#q3">3. 代码到可执行程序步骤 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q4">4. 可执行文件地址与空间 <span class="st">★</span></a></li>
+      <li><a href="#q5">5. main 参数 argc/argv <span class="st">★</span></a></li>
+      <li><a href="#q6">6. main 返回值 <span class="st">★★</span></a></li>
+      <li><a href="#q7">7. 局部变量初始化一致性 <span class="st">★★★</span></a></li>
+      <li><a href="#q8">8. const 关键字 <span class="st">★★★</span></a></li>
+      <li><a href="#q9">9. 如何修改 const 常量 <span class="st">★★★</span></a></li>
+      <li><a href="#q10">10. const 属性确定时机 <span class="st">★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s21">2.1 区别类</div>
+    <ul id="s21-list">
+      <li><a href="#q11">11. 指针 vs 引用 <span class="st">★★★★</span></a></li>
+      <li><a href="#q12">12. 传参用指针还是引用 <span class="st">★★★</span></a></li>
+      <li><a href="#q13">13. int *p[10] 等类型 <span class="st">★★★★</span></a></li>
+      <li><a href="#q14">14. 函数 vs 宏定义 <span class="st">★★★</span></a></li>
+      <li><a href="#q15">15. 宏定义 vs typedef <span class="st">★★★</span></a></li>
+      <li><a href="#q16">16. 变量声明 vs 定义 <span class="st">★★★</span></a></li>
+      <li><a href="#q17">17. strlen vs sizeof <span class="st">★★</span></a></li>
+      <li><a href="#q18">18. 常量指针 vs 指针常量 <span class="st">★★</span></a></li>
+      <li><a href="#q19">19. C++ vs C <span class="st">★★★</span></a></li>
+      <li><a href="#q20">20. struct vs class <span class="st">★★</span></a></li>
+      <li><a href="#q21">21. define 宏 vs const <span class="st">★★★</span></a></li>
+      <li><a href="#q22">22. strcpy vs memcpy <span class="st">★★</span></a></li>
+      <li><a href="#q23">23. 数组名 vs 首元素指针 <span class="st">★★★</span></a></li>
+      <li><a href="#q24">24. C++ 调用 C <span class="st">★★</span></a></li>
+      <li><a href="#q25">25. 野指针 vs 悬空指针 <span class="st">★★★</span></a></li>
+      <li><a href="#q26">26. 内联函数 vs 宏 <span class="st">★★</span></a></li>
+      <li><a href="#q27">27. public/protected/private <span class="st">★★★</span></a></li>
+      <li><a href="#q28">28. 大小端存储 <span class="st">★★★</span></a></li>
+      <li><a href="#q29">29. volatile/mutable/explicit <span class="st">★★</span></a></li>
+      <li><a href="#q30">30. C 与 C++ 类型安全 <span class="st">★★★</span></a></li>
+      <li><a href="#q31">31. static 用法 <span class="st">★★★★</span></a></li>
+      <li><a href="#q32">32. 指针与 const 详解 <span class="st">★★★</span></a></li>
+      <li><a href="#q33">33. strcpy vs strncpy <span class="st">★★★</span></a></li>
+      <li><a href="#q34">34. strcpy/sprintf/memcpy <span class="st">★★★</span></a></li>
+      <li><a href="#q35">35. 形参 vs 实参 <span class="st">★★★</span></a></li>
+      <li><a href="#q36">36. 初始化 vs 赋值 <span class="st">★★★</span></a></li>
+      <li><a href="#q37">37. 定义 vs 声明 <span class="st">★★★</span></a></li>
+      <li><a href="#q38">38. 三类参数传递 <span class="st">★★★</span></a></li>
+      <li><a href="#q39">39. Debug vs Release <span class="st">★★★</span></a></li>
+      <li><a href="#q40">40. 深拷贝 vs 浅拷贝 <span class="st">★★★</span></a></li>
+      <li><a href="#q41">41. cout vs printf <span class="st">★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s22">2.2 面向对象</div>
+    <ul id="s22-list">
+      <li><a href="#q42">42. 面向对象三大特性 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q43">43. C++ 多态实现 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q44">44. 成员初始化列表 <span class="st">★★★</span></a></li>
+      <li><a href="#q45">45. 常用构造函数 <span class="st">★★★★</span></a></li>
+      <li><a href="#q46">46. 拷贝初始化 vs 直接初始化 <span class="st">★★★</span></a></li>
+      <li><a href="#q47">47. 移动构造函数 <span class="st">★★★</span></a></li>
+      <li><a href="#q48">48. 重载/重写/隐藏 <span class="st">★★★</span></a></li>
+      <li><a href="#q49">49. string vs char* <span class="st">★★</span></a></li>
+      <li><a href="#q50">50. 继承对象转换 <span class="st">★★★★</span></a></li>
+      <li><a href="#q51">51. 静态绑定 vs 动态绑定 <span class="st">★★★★</span></a></li>
+      <li><a href="#q52">52. 动态编译 vs 静态编译 <span class="st">★★★★</span></a></li>
+      <li><a href="#q53">53. 虚函数的代价 <span class="st">★★★★</span></a></li>
+      <li><a href="#q54">54. 静态函数能是虚函数吗 <span class="st">★★★</span></a></li>
+      <li><a href="#q55">55. 哪些函数不能是虚函数 <span class="st">★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s23">2.3 内存相关</div>
+    <ul id="s23-list">
+      <li><a href="#q56">56. C++ 内存分区 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q57">57. 静态/动态内存分配 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q58">58. new vs malloc 原理 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q59">59. new/delete vs malloc/free <span class="st">★★★★★</span></a></li>
+      <li><a href="#q60">60. 为何还要 malloc/free <span class="st">★★★</span></a></li>
+      <li><a href="#q61">61. free 是否立即归还 OS <span class="st">★★★</span></a></li>
+      <li><a href="#q62">62. delete/delete[]/allocator <span class="st">★★★</span></a></li>
+      <li><a href="#q63">63. malloc 内存能 delete 吗 <span class="st">★★</span></a></li>
+      <li><a href="#q64">64. 内存泄漏 vs 越界 <span class="st">★★★</span></a></li>
+      <li><a href="#q65">65. 一级/二级配置器 <span class="st">★★</span></a></li>
+      <li><a href="#q66">66. 内存配置与分配 <span class="st">★★</span></a></li>
+      <li><a href="#q67">67. 栈的用途 & Flash/RAM <span class="st">★★</span></a></li>
+      <li><a href="#q68">68. 堆 vs 栈 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q69">69. 堆快还是栈快 <span class="st">★★★★</span></a></li>
+      <li><a href="#q70">70. 类成员内存分布 <span class="st">★★★★</span></a></li>
+      <li><a href="#q71">71. 静态变量初始化时机 <span class="st">★★★★</span></a></li>
+      <li><a href="#q72">72. this 指针 <span class="st">★★★</span></a></li>
+      <li><a href="#q73">73. this 指针常见问题 <span class="st">★★</span></a></li>
+      <li><a href="#q74">74. 几个类的大小 <span class="st">★★</span></a></li>
+      <li><a href="#q75">75. 内存对齐及原因 <span class="st">★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s24">2.4 容器</div>
+    <ul id="s24-list">
+      <li><a href="#q76">76. STL 容器概述 <span class="st">★★★★</span></a></li>
+      <li><a href="#q77">77. 常用 STL 容器 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q78">78. deque 底层 <span class="st">★</span></a></li>
+      <li><a href="#q79">79. 手写 vector/stack/queue <span class="st">★★★★</span></a></li>
+      <li><a href="#q80">80. vector 扩容原理 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q81">81. vector 分配内存区 <span class="st">★★★</span></a></li>
+      <li><a href="#q82">82. unordered_map 用途 <span class="st">★</span></a></li>
+      <li><a href="#q83">83. ++it 与 it++ <span class="st">★★</span></a></li>
+      <li><a href="#q84">84. 左值引用 vs 右值引用 <span class="st">★★★</span></a></li>
+      <li><a href="#q85">85. hashtable 实现 <span class="st">★★</span></a></li>
+      <li><a href="#q86">86. 哈希冲突解决 <span class="st">★★</span></a></li>
+      <li><a href="#q87">87. 迭代器实现 <span class="st">★★</span></a></li>
+      <li><a href="#q88">88. map 插入方式 <span class="st">★★</span></a></li>
+      <li><a href="#q89">89. vector/map 越界访问 <span class="st">★★</span></a></li>
+      <li><a href="#q90">90. map [] vs find <span class="st">★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s25">2.5 智能指针</div>
+    <ul id="s25-list">
+      <li><a href="#q91">91. 智能指针介绍 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q92">92. shared_ptr 实现 <span class="st">★★★</span></a></li>
+      <li><a href="#q93">93. 手写智能指针 <span class="st">★★★</span></a></li>
+      <li><a href="#q94">94. auto_ptr 作用 <span class="st">★★</span></a></li>
+      <li><a href="#q95">95. 循环引用解决 <span class="st">★★★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s26">2.6 模板编程</div>
+    <ul id="s26-list">
+      <li><a href="#q96">96. 模板编程介绍 <span class="st">★★★★</span></a></li>
+      <li><a href="#q97">97. 模板参数替换阶段 <span class="st">★★★</span></a></li>
+      <li><a href="#q98">98. 模板传参类型 <span class="st">★★★</span></a></li>
+      <li><a href="#q99">99. 模板工作方式 <span class="st">★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s27">2.7 新特性</div>
+    <ul id="s27-list">
+      <li><a href="#q100">100. C++11 新特性 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q101">101. 递归 vs 迭代 <span class="st">★★★</span></a></li>
+      <li><a href="#q102">102. 返回值优化 RVO <span class="st">★★★</span></a></li>
+      <li><a href="#q103">103. 四种类型转换 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q104">104. 函数参数传递方式 <span class="st">★★★★</span></a></li>
+      <li><a href="#q105">105. lock_guard 机制 <span class="st">★★</span></a></li>
+      <li><a href="#q106">106. move 底层原理 <span class="st">★★★</span></a></li>
+      <li><a href="#q107">107. forward 完美转发 <span class="st">★★★</span></a></li>
+      <li><a href="#q108">108. move vs forward <span class="st">★★★</span></a></li>
+      <li><a href="#q109">109. lambda 表达式 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q110">110. 函数指针 <span class="st">★★★★</span></a></li>
+      <li><a href="#q111">111. constexpr vs const <span class="st">★★★★</span></a></li>
+      <li><a href="#q112">112. constexpr 好处 <span class="st">★★</span></a></li>
+      <li><a href="#q113">113. 为何不允许虚拟成员函数模板 <span class="st">★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s28">2.8 其他</div>
+    <ul id="s28-list">
+      <li><a href="#q114">114. 函数调用压栈过程 <span class="st">★★★</span></a></li>
+      <li><a href="#q115">115. coredump 调试 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q116">116. 临时变量作返回值 <span class="st">★★</span></a></li>
+      <li><a href="#q117">117. 指针加减计算 <span class="st">★★</span></a></li>
+      <li><a href="#q118">118. 浮点数相等判断 <span class="st">★★★</span></a></li>
+    </ul>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <h1>C++ · 嵌入式校招八股</h1>
+      <p>精简重构版 · 每个问题先给一句话结论，再展开细节 · 表格 + 流程图 + 代码辅助记忆</p>
+      <p class="warn">提示：流程图依赖 mermaid.js（需联网加载）；离线时流程图仍会显示源代码块。</p>
+    </div>
+
+    <!-- ============ 2.0 ============ -->
+    <h2 id="s20" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;">2.0 基础</h2>
+    <!-- Q1 -->
+    <div class="q" id="q1">
+      <div class="q-head" onclick="document.getElementById('b1').open=!document.getElementById('b1').open">
+        <span class="q-idx">1</span><span class="q-title">你是如何学习 C++ 的？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>自学三步走：先看书学语法基础 → 再刷算法题/网课巩固用法 → 最后靠<b>项目实践</b>提升，用时间线表达成长性。</div>
+        <details id="b1">
+          <summary>展开：学习方法论 &amp; 面试表述</summary>
+          <ol>
+            <li><b>打基础</b>：读《C++ Primer Plus》等，学基本语法、特性、原理。</li>
+            <li><b>巩固</b>：看进阶网课 + 刷数据结构/算法题（LeetCode），熟练 C++ 用法。</li>
+            <li><b>拔高</b>：做项目实践，阅读他人高质量代码，在发现问题→解决问题中精进。</li>
+          </ol>
+          <h3 class="detail">面试表述建议（体现成长性）</h3>
+          <ul>
+            <li>用<b>时间线</b>：大二开始接触 → 大三通过 xx 项目学习并实践了 xx → 现在能独立用 C++ 撕题。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="q" id="q2">
+      <div class="q-head" onclick="document.getElementById('b2').open=!document.getElementById('b2').open">
+        <span class="q-idx">2</span><span class="q-title">能讲一下结构体的内存对齐问题吗？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>成员按声明顺序存放，首成员地址=结构体地址；整体按<b>最大成员对齐要求</b>对齐，必要时插入填充字节，保证每个成员的起始地址满足对齐。</div>
+        <details id="b2">
+          <summary>展开：规则 + 代码 + C++11 控制</summary>
+          <ul>
+            <li><b>存储顺序</b>：成员按声明顺序依次存放，结构体变量地址与第一个成员地址一致。</li>
+            <li><b>默认对齐</b>：结构体对齐 = 最大成员类型对齐要求的倍数（如有 <code>double</code> 就按 8 字节对齐）。</li>
+            <li><b>内存填充</b>：为满足对齐，成员间可能插入填充字节，避免性能下降或硬件异常。</li>
+          </ul>
+          <pre><code>struct S { char a; int b; short c; };   // 默认对齐：sizeof = 12
+// a@0, 填充1字节, b@4, c@8~9, 整体补到 4 的倍数 → 12</code></pre>
+          <h3 class="detail">C++11 对齐控制</h3>
+          <ul>
+            <li><code>alignof(T)</code>：查询类型 T 的对齐要求（如 <code>alignof(double)</code> = 8）。</li>
+            <li><code>alignas(n)</code>：指定变量/类型/结构体的对齐（如 <code>alignas(16) struct S {...};</code>）。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="q" id="q3">
+      <div class="q-head" onclick="document.getElementById('b3').open=!document.getElementById('b3').open">
+        <span class="q-idx">3</span><span class="q-title">C++ 从代码到可执行程序经历了哪些步骤？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>四个阶段：<b>预编译 → 编译 → 汇编 → 链接</b>，最终生成可执行文件（链接又分静态链接与动态链接）。</div>
+        <details id="b3">
+          <summary>展开：四阶段流程图 &amp; 详解</summary>
+          <div class="mermaid">
+flowchart LR
+    A[源代码 .cpp] --> B[预编译<br>宏展开/头文件/条件编译]
+    B --> C[编译<br>词法→语法→语义→优化<br>生成汇编 .s]
+    C --> D[汇编<br>汇编→机器码<br>生成目标文件 .o]
+    D --> E[链接<br>符号解析+地址重定位<br>生成可执行文件]
+          </div>
+          <ol>
+            <li><b>预编译</b>：处理 `#` 指令——宏展开、条件编译（#if/#ifdef）、头文件包含（#include 递归展开）、删注释、保留 #pragma、加调试信息；生成 .i/.ii。</li>
+            <li><b>编译</b>：词法分析（生成 token）→ 语法分析（生成语法树）→ 语义分析（类型检查等）→ 代码优化（常量折叠/死代码消除/循环优化）；生成汇编 .s。</li>
+            <li><b>汇编</b>：汇编 → 机器码，生成目标文件 .o/.obj（可能还含未解析符号）。</li>
+            <li><b>链接</b>：符号解析（函数/变量名匹配地址）+ 地址重定位（分配实际地址），合并目标文件与库成可执行程序。</li>
+          </ol>
+          <h3 class="detail">静态链接 vs 动态链接</h3>
+          <table>
+            <tr><th>方式</th><th>静态链接</th><th>动态链接</th></tr>
+            <tr><td>时机</td><td>编译/链接时把库代码全部嵌入</td><td>运行时才加载库（.so/.dll），只记录符号引用</td></tr>
+            <tr><td>文件大小</td><td>大，独立可部署</td><td>小，可共享库文件</td></tr>
+            <tr><td>更新</td><td>需重新编译整个程序</td><td>库可独立升级，无需重编译</td></tr>
+            <tr><td>依赖</td><td>不依赖外部库</td><td>缺库则无法运行</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="q" id="q4">
+      <div class="q-head" onclick="document.getElementById('b4').open=!document.getElementById('b4').open">
+        <span class="q-idx">4</span><span class="q-title">可执行程序后缀是什么？内存开始地址是多少？空间范围呢？</span><span class="stars st1">★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>Linux 无固定后缀、格式为 <b>ELF</b>；x86-64 默认加载地址 <b>0x400000</b>，x86 为 <b>0x08048000</b>；空间由代码段/数据段/BSS/堆/栈组成。</div>
+        <details id="b4">
+          <summary>展开：加载地址 &amp; 内存区域</summary>
+          <table>
+            <tr><th>区域</th><th>内容</th></tr>
+            <tr><td>代码段 Text</td><td>可执行代码，只读</td></tr>
+            <tr><td>数据段 Data</td><td>已初始化全局/静态变量</td></tr>
+            <tr><td>BSS 段</td><td>未初始化全局/静态变量</td></tr>
+            <tr><td>堆 Heap</td><td>malloc/new 动态分配</td></tr>
+            <tr><td>栈 Stack</td><td>函数调用、局部变量</td></tr>
+          </table>
+          <p style="color:var(--muted);font-size:13px;">加载地址可由链接器 <code>-Ttext</code> 等参数改变。</p>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="q" id="q5">
+      <div class="q-head" onclick="document.getElementById('b5').open=!document.getElementById('b5').open">
+        <span class="q-idx">5</span><span class="q-title">解释 int main(int argc, char *argv[]) 的参数？</span><span class="stars st1">★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>argc</code>=命令行参数<b>个数</b>（含程序名），<code>argv</code>=字符串指针<b>数组</b>，<code>argv[0]</code> 是程序名，<code>argv[argc]</code> 为 NULL。</div>
+        <details id="b5">
+          <summary>展开：参数结构与内存</summary>
+          <ul>
+            <li>运行 <code>./myprogram arg1 arg2</code> 时 <code>argc</code>=3（程序名+2 个参数）。</li>
+            <li><code>argv</code> 是指向指针数组的指针，<code>argv[0]</code>=程序名，<code>argv[1]</code>/<code>argv[2]</code>…为其余参数。</li>
+            <li><code>argv</code> 数组以 <code>argv[argc]</code>（空指针 NULL）表示结束。</li>
+            <li>内存：<code>argc</code> 为栈上整型；<code>argv</code> 在栈上，是指向字符数组（命令行参数字符串）的指针数组。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="q" id="q6">
+      <div class="q-head" onclick="document.getElementById('b6').open=!document.getElementById('b6').open">
+        <span class="q-idx">6</span><span class="q-title">main 函数的返回值有什么值得注意的地方？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>返回值类型必须为 <b>int</b>，是给 OS 的退出状态：<b>0=成功</b>，<b>非 0=错误码</b>（可自定义区分错误类型）。</div>
+        <details id="b6">
+          <summary>展开</summary>
+          <ul>
+            <li>main 返回值传给调用者（操作系统），指示退出状态。</li>
+            <li>返回 0：正常退出；非 0：异常/错误退出，可定义不同错误码。</li>
+            <li>常用 <code>getopt()</code> 解析 <code>-a</code>/<code>-b</code> 等命令行选项。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="q" id="q7">
+      <div class="q-head" onclick="document.getElementById('b7').open=!document.getElementById('b7').open">
+        <span class="q-idx">7</span><span class="q-title">连续调用同一个函数两次，局部变量初始化结果一致吗？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>取决于类型：<b>基本类型未初始化则值未定义（可能不同）</b>；<b>类类型每次调构造（结果一致）</b>；静态局部变量只初始化一次。</div>
+        <details id="b7">
+          <summary>展开：函数调用过程 &amp; 初始化结果</summary>
+          <h3 class="detail">函数调用四步</h3>
+          <ol>
+            <li>压栈参数 → 跳转函数入口。</li>
+            <li>在栈上为局部变量分配空间。</li>
+            <li>执行函数体。</li>
+            <li>释放局部变量空间（栈帧弹出）→ 传递返回值。</li>
+          </ol>
+          <h3 class="detail">初始化结果</h3>
+          <table>
+            <tr><th>局部变量类型</th><th>结果</th></tr>
+            <tr><td>基本类型(int/float)未初始化</td><td>值未定义，两次调用可能不同（取决于残留的栈内存）</td></tr>
+            <tr><td>类类型(std::string/自定义类)</td><td>每次调用构造，结果一致</td></tr>
+            <tr><td>静态局部变量</td><td>只初始化一次，后续保持上次值</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="q" id="q8">
+      <div class="q-head" onclick="document.getElementById('b8').open=!document.getElementById('b8').open">
+        <span class="q-idx">8</span><span class="q-title">你知道 const 关键字吗？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>const</code> 定义<b>只读常量</b>，初始化后不可修改，可修饰变量/指针/函数参数/成员函数/返回值，提升安全性与可读性。</div>
+        <details id="b8">
+          <summary>展开：四种常见用法</summary>
+          <pre><code>// 1. 普通变量
+const int x = 10;     // x = 20; 错误
+
+// 2. 指针（详见 Q32）
+const int* p  = &amp;a;   // 指向内容不可改，指针可改
+int* const p2 = &amp;a;   // 指针本身不可改，内容可改
+
+// 3. 函数参数（防止意外修改，传大对象常用 const 引用）
+void f(const LargeObject&amp; obj) { /* 只读 */ }
+
+// 4. 成员函数（不修改对象状态，可被 const 对象调用）
+int getData() const { return data; }</code></pre>
+          <ul>
+            <li>修饰普通变量：值声明后不可改。</li>
+            <li>修饰指针：可区分「指向的内容」与「指针本身」。</li>
+            <li>修饰函数参数：函数体内不能改传入值。</li>
+            <li>修饰成员函数：保证不改对象状态，可在 const 对象上调用。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q9 -->
+    <div class="q" id="q9">
+      <div class="q-head" onclick="document.getElementById('b9').open=!document.getElementById('b9').open">
+        <span class="q-idx">9</span><span class="q-title">如何修改 const 常量？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>可用 <code>const_cast</code> 去 const 或 <code>memcpy</code> 直接改内存绕过限制，但都属于<b>未定义行为，不推荐</b>。</div>
+        <details id="b9">
+          <summary>展开：两种绕过方式</summary>
+          <pre><code>const int x = 10;
+int* p = const_cast&lt;int*&gt;(&amp;x);
+*p = 20;                     // 通过指针修改 const 变量（未定义行为）
+
+const int x = 10; int y = 20;
+memcpy((void*)&amp;x, &amp;y, sizeof(x)); // 直接操作内存修改 const（高风险）</code></pre>
+          <ul>
+            <li><code>const_cast</code>：去除对象的 const 限制；若对象存于只读内存，修改会导致崩溃。</li>
+            <li><code>memcpy</code>：绕过类型系统直接写内存，高风险。</li>
+            <li>结论：这些操作可能引发未定义行为、降低可维护性，应尽量避免。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q10 -->
+    <div class="q" id="q10">
+      <div class="q-head" onclick="document.getElementById('b10').open=!document.getElementById('b10').open">
+        <span class="q-idx">10</span><span class="q-title">const 属性在什么时候确定？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>分两种：<b>编译期常量</b>（值编译时确定，可内联/常量折叠）与<b>运行时常量</b>（值运行时由函数/输入确定，编译器无法优化）。</div>
+        <details id="b10">
+          <summary>展开：两类常量</summary>
+          <table>
+            <tr><th>类型</th><th>确定时机</th><th>编译器行为</th></tr>
+            <tr><td>编译期常量</td><td>编译时确定（<code>const int x = 10;</code>）</td><td>可内联、常量折叠，甚至不分配运行时内存</td></tr>
+            <tr><td>运行时常量</td><td>运行时确定（<code>const int x = getNum();</code>）</td><td>编译期不知其值，无法优化，运行时赋值后仍不可改</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 2.1 ============ -->
+    <h2 id="s21" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">2.1 区别类</h2>
+    <!-- Q11 -->
+    <div class="q" id="q11">
+      <div class="q-head" onclick="document.getElementById('b11').open=!document.getElementById('b11').open">
+        <span class="q-idx">11</span><span class="q-title">指针和引用的区别？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>指针存地址、可为空、可改指向、可多级；引用是<b>别名</b>、必须初始化、不可改绑、更安全。</div>
+        <details id="b11">
+          <summary>展开：完整对比表</summary>
+          <table>
+            <tr><th>特性</th><th>指针</th><th>引用</th></tr>
+            <tr><td>本质</td><td>存储一个地址</td><td>原变量的别名</td></tr>
+            <tr><td>级数</td><td>可多级指针</td><td>仅一级引用</td></tr>
+            <tr><td>是否可空</td><td>可指向 nullptr</td><td>不能为空，必须初始化</td></tr>
+            <tr><td>初始化后可变</td><td>可改变指向</td><td>不可改变目标</td></tr>
+            <tr><td>sizeof</td><td>指针大小（地址大小）</td><td>指对象（所绑变量）的大小</td></tr>
+            <tr><td>作函数参数</td><td>传指针副本，改指向不影响实参</td><td>传引用，改变直接影响实参</td></tr>
+            <tr><td>声明与初始化</td><td>可先声明再初始化</td><td>声明时即须初始化</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q12 -->
+    <div class="q" id="q12">
+      <div class="q-head" onclick="document.getElementById('b12').open=!document.getElementById('b12').open">
+        <span class="q-idx">12</span><span class="q-title">传函数参数时，何时用指针、何时用引用？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>要改对象且<b>可能传空/可不改时用指针</b>；要改对象且<b>保证有效时用引用</b>；只读大对象传 <code>const 引用</code> 避免拷贝。</div>
+        <details id="b12">
+          <summary>展开：选择依据</summary>
+          <ul>
+            <li><b>需要修改对象</b>：可空或可选 → 指针；不需判空、保证有效 → 引用（更简洁安全）。</li>
+            <li><b>返回动态分配内存</b>：只能用指针（引用无法表达「无对象」的悬空语义）。</li>
+            <li><b>避免拷贝/栈开销</b>：大对象、递归场景用引用；只读用 const 引用。</li>
+            <li><b>可选参数</b>：指针可传 nullptr 表达「缺省」。 </li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q13 -->
+    <div class="q" id="q13">
+      <div class="q-head" onclick="document.getElementById('b13').open=!document.getElementById('b13').open">
+        <span class="q-idx">13</span><span class="q-title">区别以下类型：int *p[10] 等</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>int *p[10]</code> 指针数组、<code>int (*p)[10]</code> 数组指针、<code>int *p(int)</code> 函数声明、<code>int (*p)(int)</code> 函数指针。</div>
+        <details id="b13">
+          <summary>展开：四类声明辨析</summary>
+          <table>
+            <tr><th>声明</th><th>含义</th></tr>
+            <tr><td><code>int *p[10]</code></td><td>指针数组：10 个元素，每个是指向 int 的指针</td></tr>
+            <tr><td><code>int (*p)[10]</code></td><td>数组指针：1 个指针，指向含 10 个 int 的数组</td></tr>
+            <tr><td><code>int *p(int)</code></td><td>函数声明：p 是函数，接收 int、返回 int*</td></tr>
+            <tr><td><code>int (*p)(int)</code></td><td>函数指针：指向「接收 int、返回 int」的函数</td></tr>
+          </table>
+          <pre><code>int func(int a) { return a * 2; }
+int (*p)(int) = &amp;func;   // 函数指针
+int result = p(5);        // 等价 func(5)
+
+int* p2(int a) { static int x=10; return &amp;x; } // 返回 int* 的函数</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q14 -->
+    <div class="q" id="q14">
+      <div class="q-head" onclick="document.getElementById('b14').open=!document.getElementById('b14').open">
+        <span class="q-idx">14</span><span class="q-title">函数和宏定义的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>宏在<b>预处理期文本替换</b>、无类型检查、无返回值；函数在<b>运行时跳转调用</b>、有类型检查、可返回值。</div>
+        <details id="b14">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>宏定义</th><th>函数</th></tr>
+            <tr><td>处理时机</td><td>预处理阶段文本替换</td><td>运行时跳转调用</td></tr>
+            <tr><td>类型检查</td><td>无</td><td>有</td></tr>
+            <tr><td>返回值</td><td>无，仅代码插入</td><td>有，return 返回</td></tr>
+            <tr><td>分号</td><td>不需要加分号</td><td>调用需加分号</td></tr>
+            <tr><td>效率</td><td>无调用开销，更快</td><td>有调用开销</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q15 -->
+    <div class="q" id="q15">
+      <div class="q-head" onclick="document.getElementById('b15').open=!document.getElementById('b15').open">
+        <span class="q-idx">15</span><span class="q-title">宏定义和 typedef 的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>宏是<b>预处理期文本替换</b>、无类型检查；typedef 是<b>编译期类型别名</b>、有类型检查。</div>
+        <details id="b15">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>宏 #define</th><th>typedef</th></tr>
+            <tr><td>用途</td><td>常量/代码片段替换</td><td>定义类型别名</td></tr>
+            <tr><td>时机</td><td>预处理期文本替换</td><td>编译期处理</td></tr>
+            <tr><td>类型检查</td><td>无</td><td>有</td></tr>
+            <tr><td>示例</td><td><code>#define p_char char*</code></td><td><code>typedef char* p_char;</code></td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q16 -->
+    <div class="q" id="q16">
+      <div class="q-head" onclick="document.getElementById('b16').open=!document.getElementById('b16').open">
+        <span class="q-idx">16</span><span class="q-title">变量声明和定义的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><b>声明</b>只告知类型与名字、不分配内存（可多次）；<b>定义</b>分配内存、创建变量（只能一次）。</div>
+        <details id="b16">
+          <summary>展开</summary>
+          <pre><code>extern int x;  // 声明：告知存在，不分配内存
+int x = 10;    // 定义：分配内存并初始化</code></pre>
+          <ul>
+            <li><b>内存</b>：声明不分配内存；定义分配内存并（可）初始化。</li>
+            <li><b>次数</b>：声明可多处（extern 跨文件）；定义只能一次，多处定义 → 链接错误。</li>
+            <li><b>作用</b>：声明用于跨文件共享，让链接器找到符号；定义在单一源文件。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q17 -->
+    <div class="q" id="q17">
+      <div class="q-head" onclick="document.getElementById('b17').open=!document.getElementById('b17').open">
+        <span class="q-idx">17</span><span class="q-title">strlen 和 sizeof 的区别？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>sizeof</code> 是<b>编译期运算符</b>算类型/变量大小；<code>strlen</code> 是<b>运行时库函数</b>，算以 <code>'\0'</code> 结尾的字符串长度（不含 <code>'\0'</code>）。</div>
+        <details id="b17">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>sizeof</th><th>strlen</th></tr>
+            <tr><td>性质</td><td>运算符</td><td>库函数</td></tr>
+            <tr><td>时机</td><td>编译期计算</td><td>运行期执行</td></tr>
+            <tr><td>对象</td><td>任意类型/静态数组/结构体</td><td>仅 <code>'\0'</code> 结尾字符串</td></tr>
+            <tr><td>动态内存</td><td>不能用于动态分配内存</td><td>可用于动态字符串</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q18 -->
+    <div class="q" id="q18">
+      <div class="q-head" onclick="document.getElementById('b18').open=!document.getElementById('b18').open">
+        <span class="q-idx">18</span><span class="q-title">常量指针和指针常量的区别？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>常量指针 <code>const int* p</code>：<b>指向的内容不可改</b>、指针可改；指针常量 <code>int* const p</code>：<b>指针不可改</b>、内容可改。</div>
+        <details id="b18">
+          <summary>展开：对比表 + 代码</summary>
+          <table>
+            <tr><th>类型</th><th>声明</th><th>指针本身</th><th>指向内容</th></tr>
+            <tr><td>常量指针</td><td><code>const int* p</code></td><td>可改</td><td>不可改</td></tr>
+            <tr><td>指针常量</td><td><code>int* const p</code></td><td>不可改</td><td>可改</td></tr>
+          </table>
+          <pre><code>const int* p = &amp;x;  // 常量指针
+p = &amp;y;   // 合法
+// *p = 30; 错误
+
+int* const q = &amp;x;  // 指针常量
+*q = 30;  // 合法
+// q = &amp;y; 错误</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q19 -->
+    <div class="q" id="q19">
+      <div class="q-head" onclick="document.getElementById('b19').open=!document.getElementById('b19').open">
+        <span class="q-idx">19</span><span class="q-title">C++ 和 C 语言的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>C++ 在 C 上加<b>面向对象 + 泛型 + 引用 + 异常 + 函数重载</b>，用 new/delete、string、iostream 等更安全灵活的设施。</div>
+        <details id="b19">
+          <summary>展开：要点罗列</summary>
+          <table>
+            <tr><th>维度</th><th>C</th><th>C++</th></tr>
+            <tr><td>内存分配</td><td>malloc/free</td><td>new/delete</td></tr>
+            <tr><td>字符串</td><td>字符数组 + 库函数</td><td>std::string 类</td></tr>
+            <tr><td>输入输出</td><td>printf/scanf</td><td>cin/cout 流（iostream）</td></tr>
+            <tr><td>异常</td><td>setjmp/longjmp</td><td>try/catch/throw</td></tr>
+            <tr><td>函数重载</td><td>不支持</td><td>支持（多态）</td></tr>
+            <tr><td>变量声明</td><td>须在函数开头</td><td>可在任意位置</td></tr>
+            <tr><td>引用</td><td>无，只有值/指针</td><td>支持引用 &amp;</td></tr>
+            <tr><td>面向对象/命名空间</td><td>无</td><td>class、namespace、dynamic_cast 等</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q20 -->
+    <div class="q" id="q20">
+      <div class="q-head" onclick="document.getElementById('b20').open=!document.getElementById('b20').open">
+        <span class="q-idx">20</span><span class="q-title">C++ 中 struct 和 class 的区别？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>唯一实质区别在<b>默认权限</b>：struct 默认 <b>public</b>（继承也是 public），class 默认 <b>private</b>。</div>
+        <details id="b20">
+          <summary>展开</summary>
+          <ul>
+            <li><b>相同点</b>：都可含成员函数/变量、构造/析构函数，支持封装。</li>
+            <li><b>默认访问权限</b>：struct=public，class=private。</li>
+            <li><b>默认继承方式</b>：struct=public 继承，class=private 继承。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q21 -->
+    <div class="q" id="q21">
+      <div class="q-head" onclick="document.getElementById('b21').open=!document.getElementById('b21').open">
+        <span class="q-idx">21</span><span class="q-title">define 宏定义和 const 有什么区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>宏是预处理期<b>文本替换</b>（无类型/作用域、不分配内存）；const 是编译期<b>类型安全常量</b>（有类型与作用域、占内存可常量折叠）。</div>
+        <details id="b21">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>#define</th><th>const</th></tr>
+            <tr><td>阶段</td><td>预处理期文本替换</td><td>编译期，有类型检查</td></tr>
+            <tr><td>内存</td><td>不分配内存</td><td>内存只有一份（可常量折叠）</td></tr>
+            <tr><td>作用域</td><td>全局性，易错替换</td><td>遵循声明作用域</td></tr>
+            <tr><td>推荐</td><td>条件编译/代码片段</td><td>类型安全常量定义（更推荐）</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q22 -->
+    <div class="q" id="q22">
+      <div class="q-head" onclick="document.getElementById('b22').open=!document.getElementById('b22').open">
+        <span class="q-idx">22</span><span class="q-title">strcpy 和 memcpy 的区别是什么？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>strcpy</code> 只复制字符串（靠 <code>'\0'</code> 判断结束、易溢出）；<code>memcpy</code> 按<b>指定字节数</b>复制任意类型（更通用、更安全）。</div>
+        <details id="b22">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>strcpy</th><th>memcpy</th></tr>
+            <tr><td>复制内容</td><td>仅字符串</td><td>任意类型数据块</td></tr>
+            <tr><td>结束判定</td><td>依赖源 <code>'\0'</code></td><td>显式指定字节数</td></tr>
+            <tr><td>溢出风险</td><td>有（源无 <code>'\0'</code> 或空间不足）</td><td>可控，避免溢出</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q23 -->
+    <div class="q" id="q23">
+      <div class="q-head" onclick="document.getElementById('b23').open=!document.getElementById('b23').open">
+        <span class="q-idx">23</span><span class="q-title">数组名和指向数组首元素的指针的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>数组名是<b>指针常量</b>（不可自增/改指向）；作参数会<b>退化为指针</b>，此时 sizeof 得到的是指针大小而非数组大小。</div>
+        <details id="b23">
+          <summary>展开</summary>
+          <ul>
+            <li>二者都可下标/偏移访问元素（<code>array[i]</code> 与 <code>ptr[i]</code>）。</li>
+            <li>数组名本质上是指针常量，不支持 <code>++/--</code>；指针可自增自减。</li>
+            <li>数组名作函数参数→退化为首元素指针，函数内 <code>sizeof</code> 返回指针大小。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q24 -->
+    <div class="q" id="q24">
+      <div class="q-head" onclick="document.getElementById('b24').open=!document.getElementById('b24').open">
+        <span class="q-idx">24</span><span class="q-title">C++ 中如何调用 C 语言？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>用 <code>extern "C"</code> 告诉编译器按 <b>C 的命名/链接规则</b>编译，解决 C++ 名称修饰导致的链接不兼容。</div>
+        <details id="b24">
+          <summary>展开：用法</summary>
+          <pre><code>#ifdef __cplusplus
+extern "C" {
+#endif
+void c_function();   // C 语言函数声明
+#ifdef __cplusplus
+}
+#endif</code></pre>
+          <ul>
+            <li>用于 C++ 调用 C 函数；或 C 库头文件同时支持 C/C++（用宏保护）。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q25 -->
+    <div class="q" id="q25">
+      <div class="q-head" onclick="document.getElementById('b25').open=!document.getElementById('b25').open">
+        <span class="q-idx">25</span><span class="q-title">野指针和悬空指针是啥？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>野指针=<b>未初始化</b>的指针（指向随机地址）；悬空指针=指向<b>已释放/销毁</b>内存的指针；访问都属未定义行为。</div>
+        <details id="b25">
+          <summary>展开：对比 + 预防</summary>
+          <pre><code>int* p;            // 野指针：未初始化
+*p = 10;           // 未定义行为
+
+int* p = new int(10);
+delete p;          // 悬空指针：指向已释放内存
+p = nullptr;       // 预防：释放后置空</code></pre>
+          <table>
+            <tr><th>特性</th><th>野指针</th><th>悬空指针</th></tr>
+            <tr><td>定义</td><td>未初始化，指向随机地址</td><td>指向已释放/销毁的内存</td></tr>
+            <tr><td>成因</td><td>定义后未赋初值</td><td>释放后未置 nullptr</td></tr>
+            <tr><td>解决</td><td>声明即初始化 nullptr</td><td>释放后立即置 nullptr</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q26 -->
+    <div class="q" id="q26">
+      <div class="q-head" onclick="document.getElementById('b26').open=!document.getElementById('b26').open">
+        <span class="q-idx">26</span><span class="q-title">内联函数和宏定义的区别？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>inline 在<b>编译期展开</b>、有类型/语法检查、可重载；宏在<b>预处理期替换</b>、无检查、易产生歧义。</div>
+        <details id="b26">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>宏 #define</th><th>内联 inline</th></tr>
+            <tr><td>处理时机</td><td>预处理阶段</td><td>编译期</td></tr>
+            <tr><td>类型检查</td><td>无</td><td>有</td></tr>
+            <tr><td>返回值</td><td>无（文本替换）</td><td>可返回具体值</td></tr>
+            <tr><td>重载/语法检查</td><td>不支持/无</td><td>支持/有</td></tr>
+            <tr><td>歧义</td><td>参数可能引起歧义</td><td>无</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q27 -->
+    <div class="q" id="q27">
+      <div class="q-head" onclick="document.getElementById('b27').open=!document.getElementById('b27').open">
+        <span class="q-idx">27</span><span class="q-title">public、protected、private 的访问与继承权限总结</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>访问权限控制谁能访问成员；继承方式决定基类成员在派生类中<b>降级</b>为哪种权限。</div>
+        <details id="b27">
+          <summary>展开：两张表</summary>
+          <h3 class="detail">访问权限</h3>
+          <table>
+            <tr><th>权限</th><th>类外部</th><th>派生类</th><th>类内部</th></tr>
+            <tr><td>public</td><td>✔</td><td>✔</td><td>✔</td></tr>
+            <tr><td>protected</td><td>✘</td><td>✔</td><td>✔</td></tr>
+            <tr><td>private</td><td>✘</td><td>✘</td><td>✔</td></tr>
+          </table>
+          <h3 class="detail">继承方式降级</h3>
+          <table>
+            <tr><th>基类成员</th><th>public 继承</th><th>protected 继承</th><th>private 继承</th></tr>
+            <tr><td>public</td><td>public</td><td>protected</td><td>private</td></tr>
+            <tr><td>protected</td><td>protected</td><td>protected</td><td>private</td></tr>
+            <tr><td>private</td><td>✘</td><td>✘</td><td>✘</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q28 -->
+    <div class="q" id="q28">
+      <div class="q-head" onclick="document.getElementById('b28').open=!document.getElementById('b28').open">
+        <span class="q-idx">28</span><span class="q-title">什么是大小端存储？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><b>大端</b>：高字节存低地址；<b>小端</b>：低字节存低地址。网络序=大端，主机常为小端，用 htons/ntohl 转换。</div>
+        <details id="b28">
+          <summary>展开：字节序示意 + 转换函数</summary>
+          <pre><code>// 值 0x12345678 的存储
+// 大端: | 0x12 | 0x34 | 0x56 | 0x78 |  (低地址←高字节)
+//        0x00   0x01   0x02   0x03
+// 小端: | 0x78 | 0x56 | 0x34 | 0x12 |  (低地址←低字节)</code></pre>
+          <ul>
+            <li>网络字节序 = 大端；主机字节序常为小端。</li>
+            <li><code>htons()/htonl()</code>：主机序→网络序（大端）；<code>ntohs()/ntohl()</code>：网络序→主机序。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q29 -->
+    <div class="q" id="q29">
+      <div class="q-head" onclick="document.getElementById('b29').open=!document.getElementById('b29').open">
+        <span class="q-idx">29</span><span class="q-title">volatile、mutable、explicit 关键字用法？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>volatile</code> 防编译器缓存优化（每次读内存）；<code>mutable</code> 允许成员在 const 函数中被改；<code>explicit</code> 禁止构造函数隐式转换。</div>
+        <details id="b29">
+          <summary>展开：三关键字 + 代码</summary>
+          <table>
+            <tr><th>关键字</th><th>作用</th><th>典型场景</th></tr>
+            <tr><td>volatile</td><td>值可能被外部改动，禁缓存优化</td><td>硬件寄存器、多线程共享变量</td></tr>
+            <tr><td>mutable</td><td>const 函数中可修改的成员</td><td>缓存、计数器</td></tr>
+            <tr><td>explicit</td><td>禁止构造函数被隐式调用</td><td>防止基本类型→类对象隐式转换</td></tr>
+          </table>
+          <pre><code>class MyClass {
+    mutable int visitCount = 0;
+public:
+    explicit MyClass(int x) {}
+    void visit() const { visitCount++; }   // mutable 允许改
+};
+// MyClass obj = 10;  // 错误（explicit）
+MyClass obj2(10);     // 正确
+
+volatile int flag = 0;
+while (flag == 0) { /* 等待其他线程/硬件置 1 */ }</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q30 -->
+    <div class="q" id="q30">
+      <div class="q-head" onclick="document.getElementById('b30').open=!document.getElementById('b30').open">
+        <span class="q-idx">30</span><span class="q-title">C 和 C++ 的类型安全介绍</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>C 靠 <code>void*</code>、宏、强制转换，类型不安全；C++ 用 <b>new 返回具体类型指针 + 模板 + const</b> 提供编译期类型检查，更安全。</div>
+        <details id="b30">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>C</th><th>C++</th></tr>
+            <tr><td>指针类型检查</td><td>void* 通用指针，缺类型信息</td><td>new 返回具体类型指针</td></tr>
+            <tr><td>宏/泛型</td><td>宏文本替换、void* 参数</td><td>const/inline/模板，编译期检查</td></tr>
+            <tr><td>类型转换</td><td>强制转换 (Type)value，可能 UB</td><td>dynamic_cast 等更安全</td></tr>
+            <tr><td>常量</td><td>#define，无类型/作用域</td><td>const，有类型与作用域</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q31 -->
+    <div class="q" id="q31">
+      <div class="q-head" onclick="document.getElementById('b31').open=!document.getElementById('b31').open">
+        <span class="q-idx">31</span><span class="q-title">static 的用法和作用？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>static 提供<b>隐藏、持久化、共享</b>：限制文件作用域、静态存储区只初始化一次、类的静态成员全类共享。</div>
+        <details id="b31">
+          <summary>展开：四个维度</summary>
+          <ul>
+            <li><b>隐藏</b>：static 全局变量/函数限制在当前文件内。</li>
+            <li><b>持久化</b>：存静态数据区，程序期只初始化一次。</li>
+            <li><b>默认初始化</b>：默认初始化为 0，仅一次。</li>
+            <li><b>类中</b>：静态成员变量全类共享（类外定义）；静态成员函数无 this 指针、可类名调用、不能访问非静态成员。</li>
+          </ul>
+          <pre><code>void counter() { static int count = 0; count++; }  // 静态局部变量
+class MyClass {
+    static int count;                 // 类内声明
+    static void increment() { count++; }
+};
+int MyClass::count = 0;               // 类外定义初始化
+MyClass::increment();                 // 类名直接调用</code></pre>
+          <h3 class="detail">注意事项</h3>
+          <ul>
+            <li>静态成员须在类外初始化、只一次；静态函数无需初始化。</li>
+            <li>不能用 static 修饰构造函数或虚函数。</li>
+            <li>不要对静态局部变量重复初始化。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q32 -->
+    <div class="q" id="q32">
+      <div class="q-head" onclick="document.getElementById('b32').open=!document.getElementById('b32').open">
+        <span class="q-idx">32</span><span class="q-title">指针和 const 的用法详解？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>const 位置不同修饰对象不同：<code>const int* p</code>（底层 const，内容只读）；<code>int* const p</code>（顶层 const，指针只读）；<code>const int* const p</code>（两者都只读）。</div>
+        <details id="b32">
+          <summary>展开：三种写法 + 代码</summary>
+          <table>
+            <tr><th>声明</th><th>含义</th></tr>
+            <tr><td><code>const int* p</code></td><td>指针可改指向，指向内容不可改</td></tr>
+            <tr><td><code>int* const p</code></td><td>指针不可改，指向内容可改</td></tr>
+            <tr><td><code>const int* const p</code></td><td>指针与内容都不可改</td></tr>
+          </table>
+          <pre><code>const int value1 = 10, value2 = 20;
+const int *p = &amp;value1;
+p = &amp;value2;   // 正确：可改指向
+// *p = 15;     错误
+
+int *const q = &amp;a;
+*q = 15;       // 正确：可改内容
+// q = &amp;b;     错误</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q33 -->
+    <div class="q" id="q33">
+      <div class="q-head" onclick="document.getElementById('b33').open=!document.getElementById('b33').open">
+        <span class="q-idx">33</span><span class="q-title">strcpy 和 strncpy 的区别以及安全性？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>strcpy 复制到 <code>'\0'</code>、不查目标大小（易溢出）；strncpy 复制前 n 字符，源短则 <code>'\0'</code> 填充、源长则<b>不加 <code>'\0'</code></b>（需手动补）。</div>
+        <details id="b33">
+          <summary>展开：对比 + 代码</summary>
+          <pre><code>strcpy(dest, src);              // 到 '\0'，不查大小
+strncpy(dest, src, 5);          // 只拷 5 字符
+dest[5] = '\0';                 // 手动补终止符防未终止</code></pre>
+          <table>
+            <tr><th>特性</th><th>strcpy</th><th>strncpy</th></tr>
+            <tr><td>拷贝方式</td><td>直到 <code>'\0'</code></td><td>前 n 个字符</td></tr>
+            <tr><td>自动加 <code>'\0'</code></td><td>自动加</td><td>源短自动填充 <code>'\0'</code>；源长不加</td></tr>
+            <tr><td>大小检查</td><td>无（易溢出）</td><td>由用户保证空间</td></tr>
+            <tr><td>安全性</td><td>不安全</td><td>较安全，但注意手动补 <code>'\0'</code></td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q34 -->
+    <div class="q" id="q34">
+      <div class="q-head" onclick="document.getElementById('b34').open=!document.getElementById('b34').open">
+        <span class="q-idx">34</span><span class="q-title">strcpy、sprintf 与 memcpy 的不同之处</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>strcpy 拷贝字符串、sprintf 格式化输出到字符串、memcpy 按字节拷贝任意内存块。</div>
+        <details id="b34">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>函数</th><th>功能</th><th>操作对象</th><th>安全性</th><th>效率</th></tr>
+            <tr><td>strcpy</td><td>字符串拷贝</td><td>字符串</td><td>较低（可能溢出）</td><td>次高</td></tr>
+            <tr><td>sprintf</td><td>格式化数据为字符串</td><td>多类型→字符串</td><td>较低（可能溢出）</td><td>最低</td></tr>
+            <tr><td>memcpy</td><td>内存块拷贝</td><td>任意内存块</td><td>较高（不涉及溢出）</td><td>最高</td></tr>
+          </table>
+          <pre><code>strcpy(dest, src);
+sprintf(buf, "The number is %d", number);
+memcpy(dest, src, strlen(src) + 1);   // 按字节，含 '\0'</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q35 -->
+    <div class="q" id="q35">
+      <div class="q-head" onclick="document.getElementById('b35').open=!document.getElementById('b35').open">
+        <span class="q-idx">35</span><span class="q-title">形参与实参的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>形参是函数内占位、调用时才分配内存、结束后释放；实参是调用时传入的具体值，调用前已存在。</div>
+        <details id="b35">
+          <summary>展开</summary>
+          <ul>
+            <li><b>内存</b>：形参调用时分配、结束释放、作用域限函数内；实参调用前已存在、由调用者管理。</li>
+            <li><b>类型/值</b>：形参类型数量须与实参一致；实参可为变量/常量/表达式/函数返回值。</li>
+            <li><b>独立性</b>：非指针/引用 → 形参是副本、改不改实参；指针/引用 → 共享内存，形参修改影响实参。</li>
+            <li><b>匹配</b>：数量、类型、顺序须一致，否则编译错误。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q36 -->
+    <div class="q" id="q36">
+      <div class="q-head" onclick="document.getElementById('b36').open=!document.getElementById('b36').open">
+        <span class="q-idx">36</span><span class="q-title">初始化和赋值有啥区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>初始化在<b>对象创建时</b>完成（调用构造函数）；赋值是对象<b>已存在后</b>改值（调用 operator=）。</div>
+        <details id="b36">
+          <summary>展开</summary>
+          <pre><code>int a = 10;              // 初始化
+std::string str("Hello");// 调用构造函数
+
+int a; a = 10;           // 赋值
+std::string s; s = "x";  // 调用 operator=</code></pre>
+          <ul>
+            <li>基本类型：初始化与赋值行为基本相同。</li>
+            <li>类类型：初始化调构造（只一次）；赋值调赋值操作符（对象已存在）。</li>
+            <li>可用初始化列表初始化成员。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q37 -->
+    <div class="q" id="q37">
+      <div class="q-head" onclick="document.getElementById('b37').open=!document.getElementById('b37').open">
+        <span class="q-idx">37</span><span class="q-title">定义和声明的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>声明只告知<b>名称/类型/存在</b>（不分配内存）；定义<b>分配内存/提供实现</b>（只能一次）。</div>
+        <details id="b37">
+          <summary>展开：变量/函数/类的声明与定义</summary>
+          <pre><code>extern int a;                 // 声明
+int a = 10;                   // 定义
+int add(int x, int y);        // 函数声明（签名）
+int add(int x, int y) { return x+y; }  // 函数定义
+class MyClass;                // 类前置声明
+class MyClass { void f(); };  // 类定义</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q38 -->
+    <div class="q" id="q38">
+      <div class="q-head" onclick="document.getElementById('b38').open=!document.getElementById('b38').open">
+        <span class="q-idx">38</span><span class="q-title">值传递、指针传递、引用传递的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>值传递拷贝（不影响实参、开销大）；指针/引用传递直接操作原对象（影响实参、开销小）；引用更简洁安全。</div>
+        <details id="b38">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>方式</th><th>是否影响实参</th><th>开销</th><th>注意</th></tr>
+            <tr><td>值传递</td><td>否（副本）</td><td>大对象拷贝开销大</td><td>形参修改不影响实参</td></tr>
+            <tr><td>指针传递</td><td>是（传地址）</td><td>小（仅地址）</td><td>需处理空/野指针</td></tr>
+            <tr><td>引用传递</td><td>是（别名）</td><td>小</td><td>无需显式取址，更安全简洁</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q39 -->
+    <div class="q" id="q39">
+      <div class="q-head" onclick="document.getElementById('b39').open=!document.getElementById('b39').open">
+        <span class="q-idx">39</span><span class="q-title">Debug 和 Release 的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>Debug 含调试信息、<b>不做优化</b>、文件大（配合 .pdb）；Release 不含调试信息、<b>做速度/大小优化</b>、文件小速度快的交付版。</div>
+        <details id="b39">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>Debug</th><th>Release</th></tr>
+            <tr><td>调试信息</td><td>有（断点、变量名）</td><td>无</td></tr>
+            <tr><td>优化</td><td>不做优化</td><td>速度/大小优化（重排序、去无用代码）</td></tr>
+            <tr><td>文件</td><td>大（.exe + .pdb）</td><td>小、运行快</td></tr>
+            <tr><td>用途</td><td>开发/测试阶段调试</td><td>交付/性能测试</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q40 -->
+    <div class="q" id="q40">
+      <div class="q-head" onclick="document.getElementById('b40').open=!document.getElementById('b40').open">
+        <span class="q-idx">40</span><span class="q-title">深拷贝与浅拷贝可以描述一下吗？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>浅拷贝只拷贝<b>指针地址</b>（对象共享内存，易双 free/悬空）；深拷贝为动态内存<b>另开空间并复制内容</b>（互不影响）。</div>
+        <details id="b40">
+          <summary>展开：对比 + 深拷贝实现</summary>
+          <table>
+            <tr><th>特性</th><th>浅拷贝</th><th>深拷贝</th></tr>
+            <tr><td>动态内存</td><td>只拷指针（共享）</td><td>另开内存复制内容</td></tr>
+            <tr><td>对象独立性</td><td>互相影响</td><td>完全独立</td></tr>
+            <tr><td>风险</td><td>重复释放(double free)、悬空指针</td><td>无（各管各的）</td></tr>
+          </table>
+          <pre><code>class Test {
+public:
+    int* data;
+    Test(int v) { data = new int(v); }
+    Test(const Test&amp; other) { data = new int(*other.data); } // 深拷贝
+    ~Test() { delete data; }
+};
+Test obj1(10);
+Test obj2 = obj1;      // 深拷贝：独立内存
+*obj2.data = 20;       // obj1 不受影响</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q41 -->
+    <div class="q" id="q41">
+      <div class="q-head" onclick="document.getElementById('b41').open=!document.getElementById('b41').open">
+        <span class="q-idx">41</span><span class="q-title">cout 和 printf 有什么区别？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>cout 是 C++ 流对象、<b>类型安全</b>（自动识别类型）；printf 是 C 库函数、<b>靠格式化字符串</b>（不匹配则未定义行为）。</div>
+        <details id="b41">
+          <summary>展开</summary>
+          <ul>
+            <li><code>cout</code>：<code>std::ostream</code> 对象，重载 <code>&lt;&lt;</code> 实现输出，自动识别类型。</li>
+            <li><code>printf</code>：标准库函数，需格式化字符串与参数类型匹配。</li>
+            <li>类型安全：cout 安全；printf 不匹配可能 UB。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 2.2 ============ -->
+    <h2 id="s22" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">2.2 面向对象</h2>
+    <!-- Q42 -->
+    <div class="q" id="q42">
+      <div class="q-head" onclick="document.getElementById('b42').open=!document.getElementById('b42').open">
+        <span class="q-idx">42</span><span class="q-title">介绍面向对象的三大特性</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><b>封装</b>隐藏内部实现、<b>继承</b>复用扩展、<b>多态</b>同一接口不同行为（编译时=重载，运行时=虚函数）。</div>
+        <details id="b42">
+          <summary>展开：三特性对比 + 多态代码</summary>
+          <table>
+            <tr><th>特性</th><th>定义</th><th>实现方式</th><th>优点</th></tr>
+            <tr><td>继承</td><td>子类获得父类属性和方法</td><td><code>:</code> + 继承权限</td><td>复用代码、可扩展</td></tr>
+            <tr><td>封装</td><td>数据+方法打包，控制访问</td><td>public/protected/private</td><td>数据安全、接口简化</td></tr>
+            <tr><td>多态</td><td>同接口作用于不同对象行为不同</td><td>编译时=重载；运行时=虚函数</td><td>灵活、可扩展</td></tr>
+          </table>
+          <pre><code>class Animal { public: virtual void sound() { cout &lt;&lt; "Animal"; } };
+class Dog : public Animal { public: void sound() override { cout &lt;&lt; "Dog barks"; } };
+class Cat : public Animal { public: void sound() override { cout &lt;&lt; "Cat meows"; } };
+
+Animal* a1 = new Dog();
+Animal* a2 = new Cat();
+a1->sound();  // Dog barks
+a2->sound();  // Cat meows</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q43 -->
+    <div class="q" id="q43">
+      <div class="q-head" onclick="document.getElementById('b43').open=!document.getElementById('b43').open">
+        <span class="q-idx">43</span><span class="q-title">C++ 的多态是如何实现的？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>基类声明 <b>virtual</b> → 派生类 <b>override</b> → 基类指针/引用<b>运行时动态绑定</b>；底层靠<b>虚表 vtable + 虚表指针 vptr</b>。</div>
+        <details id="b43">
+          <summary>展开：虚表机制 + 图解</summary>
+          <ul>
+            <li><b>虚函数 virtual</b>：基类声明可被派生类重写。</li>
+            <li><b>重写 override</b>：派生类实现自己的逻辑。</li>
+            <li><b>动态绑定</b>：基类指针/引用指向派生对象，运行时按实际类型调用。</li>
+          </ul>
+          <div class="mermaid">
+flowchart TD
+    A[含虚函数的类] --> B[编译器生成虚表 vtable<br>保存各虚函数入口地址]
+    B --> C[每个对象含隐藏指针 vptr<br>指向所属类的虚表]
+    C --> D[构造函数初始化 vptr]
+    D --> E[基类指针调用虚函数]
+    E --> F[经 vptr 查 vtable<br>动态调用正确实现]
+          </div>
+          <h3 class="detail">实现过程</h3>
+          <ol>
+            <li><b>虚表生成</b>：基类/派生类各自生成虚表，派生类覆盖被重写函数的地址，并追加新虚函数。</li>
+            <li><b>vptr 初始化</b>：对象创建时构造先初始化基类部分 vptr，派生类构造再更新为派生类 vptr。</li>
+            <li><b>虚函数调用</b>：经对象的 vptr 定位虚表，取对应槽位地址动态调用。</li>
+          </ol>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q44 -->
+    <div class="q" id="q44">
+      <div class="q-head" onclick="document.getElementById('b44').open=!document.getElementById('b44').open">
+        <span class="q-idx">44</span><span class="q-title">成员初始化列表的概念以及优势是什么？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>构造函数的 <code>: 成员(初值)</code> 写法，在函数体前直接初始化成员；对类成员<b>只调一次构造</b>，比函数体赋值更高效。</div>
+        <details id="b44">
+          <summary>展开：概念 + 优势</summary>
+          <pre><code>MyClass(int x, double y) : a(x), b(y) { /* 函数体 */ }</code></pre>
+          <ul>
+            <li><b>避免重复构造</b>：自定义类型成员直接在函数体前初始化，构造只调一次；函数体赋值则先默认构造再赋值（两步）。</li>
+            <li><b>内置类型无差别</b>：int/float 等初始化列表与赋值效率相同。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q45 -->
+    <div class="q" id="q45">
+      <div class="q-head" onclick="document.getElementById('b45').open=!document.getElementById('b45').open">
+        <span class="q-idx">45</span><span class="q-title">介绍一下 C++ 中常用的构造函数？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>四类：<b>默认构造</b>、<b>带参构造</b>、<b>拷贝构造</b>（默认浅拷贝）、<b>移动构造</b>（右值引用，资源转移不深拷贝）。</div>
+        <details id="b45">
+          <summary>展开：类型表 + 代码</summary>
+          <table>
+            <tr><th>构造函数</th><th>特点</th><th>场景</th></tr>
+            <tr><td>默认构造</td><td>无参或全默认值</td><td>无参对象创建</td></tr>
+            <tr><td>初始化构造</td><td>带参数</td><td>创建时传参初始化</td></tr>
+            <tr><td>拷贝构造</td><td>参数为同类 const 引用，默认浅拷贝</td><td>复制对象</td></tr>
+            <tr><td>移动构造</td><td>参数为右值引用 T&amp;&amp;，资源转移</td><td>避免深拷贝，提高性能</td></tr>
+          </table>
+          <pre><code>MyClass() { }                       // 默认构造
+MyClass(int val) : x(val) { }       // 带参构造
+MyClass(const MyClass&amp; o) : x(o.x) { } // 拷贝构造
+MyClass(MyClass&amp;&amp; o) noexcept : data(o.data) { o.data = nullptr; } // 移动构造</code></pre>
+          <ul><li>类含动态内存时需自定义深拷贝的拷贝构造。</li></ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q46 -->
+    <div class="q" id="q46">
+      <div class="q-head" onclick="document.getElementById('b46').open=!document.getElementById('b46').open">
+        <span class="q-idx">46</span><span class="q-title">拷贝初始化和直接初始化的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>直接初始化 <code>Obj(args)</code> 直接调匹配构造；拷贝初始化 <code>Obj = value</code> 先构造临时对象再拷贝构造。</div>
+        <details id="b46">
+          <summary>展开：代码</summary>
+          <pre><code>MyClass obj1(42);    // 直接初始化：调用参数化构造
+MyClass obj2 = 42;   // 拷贝初始化：构造临时对象后拷贝构造</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q47 -->
+    <div class="q" id="q47">
+      <div class="q-head" onclick="document.getElementById('b47').open=!document.getElementById('b47').open">
+        <span class="q-idx">47</span><span class="q-title">详细说一下移动构造函数</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>C++11 引入，用<b>右值引用 T&amp;&amp;</b> 把源对象资源「搬」过来并把源置空，<b>避免重新分配与深拷贝</b>，大幅提效。</div>
+        <details id="b47">
+          <summary>展开：为什么高效 + 触发条件</summary>
+          <pre><code>class MyClass {
+    int* data;
+public:
+    MyClass(int v) : data(new int(v)) {}
+    MyClass(MyClass&amp;&amp; o) noexcept : data(o.data) { o.data = nullptr; } // 移动构造
+    ~MyClass() { delete data; }
+};
+MyClass obj1(42);
+MyClass obj2 = std::move(obj1);  // 触发移动构造</code></pre>
+          <ul>
+            <li><b>为什么快</b>：不重新分配内存、直接复用源资源、减少深拷贝。</li>
+            <li><b>触发条件</b>：用右值/将亡值初始化对象；RVO 未生效时；容器 <code>push_back</code> 临时对象。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q48 -->
+    <div class="q" id="q48">
+      <div class="q-head" onclick="document.getElementById('b48').open=!document.getElementById('b48').open">
+        <span class="q-idx">48</span><span class="q-title">C++ 中的重载、重写和隐藏的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>重载=同作用域同名单参不同；重写=派生类覆盖基类虚函数（多态）；隐藏=派生类同名函数屏蔽基类非虚函数。</div>
+        <details id="b48">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>重载 Overload</th><th>重写 Override</th><th>隐藏 Hide</th></tr>
+            <tr><td>作用域</td><td>同一作用域</td><td>基类↔派生类（垂直）</td><td>基类↔派生类</td></tr>
+            <tr><td>条件</td><td>函数名同、参数列表不同</td><td>基类须 virtual，签名完全一致</td><td>基类非虚函数，派生类同名即可</td></tr>
+            <tr><td>绑定</td><td>编译期</td><td>运行期（多态）</td><td>编译期</td></tr>
+            <tr><td>调用</td><td>按参数匹配</td><td>按实际对象类型</td><td>派生类函数可见，基类被隐藏（可 <code>Base::f</code> 显式调用）</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q49 -->
+    <div class="q" id="q49">
+      <div class="q-head" onclick="document.getElementById('b49').open=!document.getElementById('b49').open">
+        <span class="q-idx">49</span><span class="q-title">C++ 中 string 与 C 语言 char* 的区别？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>string 是<b>类</b>（自动管内存、动态扩展、运算符重载）；char* 是<b>裸指针</b>（手动管内存、易溢出、依赖 <code>'\0'</code>）。</div>
+        <details id="b49">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>char*</th><th>std::string</th></tr>
+            <tr><td>性质</td><td>指向字符数组的指针</td><td>标准库类</td></tr>
+            <tr><td>内存管理</td><td>手动</td><td>自动，动态扩展</td></tr>
+            <tr><td>操作</td><td>strcpy/strlen 等，易出错</td><td>拼接/查找/替换，运算符重载 +、+=、==</td></tr>
+            <tr><td>结束符</td><td>需显式处理 <code>'\0'</code></td><td>无需关心</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q50 -->
+    <div class="q" id="q50">
+      <div class="q-head" onclick="document.getElementById('b50').open=!document.getElementById('b50').open">
+        <span class="q-idx">50</span><span class="q-title">C++ 继承机制中对象之间的转换？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>向上转型（派生→基类）<b>自动安全</b>；向下转型（基类→派生）<b>需 dynamic_cast</b>，失败返回 nullptr（指针）/抛 bad_cast（引用）。</div>
+        <details id="b50">
+          <summary>展开：转换 + RTTI</summary>
+          <ul>
+            <li><b>向上转型 Upcasting</b>：派生→基类，自动进行、安全（派生必含基类部分）。</li>
+            <li><b>向下转型 Downcasting</b>：基类→派生，不自动，需 RTTI + <code>dynamic_cast</code> 检查。</li>
+          </ul>
+          <table>
+            <tr><th>操作</th><th>用法</th><th>失败行为</th></tr>
+            <tr><td>dynamic_cast 指针</td><td><code>dynamic_cast&lt;Derived*&gt;(base)</code></td><td>返回 nullptr</td></tr>
+            <tr><td>dynamic_cast 引用</td><td><code>dynamic_cast&lt;Derived&amp;&gt;(base)</code></td><td>抛 <code>std::bad_cast</code></td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q51 -->
+    <div class="q" id="q51">
+      <div class="q-head" onclick="document.getElementById('b51').open=!document.getElementById('b51').open">
+        <span class="q-idx">51</span><span class="q-title">你知道静态绑定和动态绑定吗？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>静态绑定按<b>静态类型（编译期）</b>决定调用（非虚函数/重载）；动态绑定按<b>动态类型（运行期）</b>经虚表决定调用（虚函数）。</div>
+        <details id="b51">
+          <summary>展开：对比 + 代码</summary>
+          <table>
+            <tr><th>特性</th><th>静态绑定</th><th>动态绑定</th></tr>
+            <tr><td>时机</td><td>编译期</td><td>运行期</td></tr>
+            <tr><td>依据</td><td>静态类型</td><td>动态类型（实际对象）</td></tr>
+            <tr><td>典型</td><td>非虚函数、普通函数、运算符重载</td><td>虚函数（经 vtable）</td></tr>
+            <tr><td>开销</td><td>低</td><td>略高（查虚表）</td></tr>
+          </table>
+          <pre><code>Base* ptr = new Derived();   // 静态类型 Base*，动态类型 Derived*
+ptr->staticFunc();          // 静态绑定 → Base::staticFunc
+ptr->dynamicFunc();         // 动态绑定 → Derived::dynamicFunc(虚函数)</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q52 -->
+    <div class="q" id="q52">
+      <div class="q-head" onclick="document.getElementById('b52').open=!document.getElementById('b52').open">
+        <span class="q-idx">52</span><span class="q-title">动态编译与静态编译介绍</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>静态编译把库代码<b>嵌入可执行文件</b>（大、独立、需重编译）；动态编译<b>运行时加载库</b>（小、可单独升级、依赖库）。</div>
+        <details id="b52">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>静态编译</th><th>动态编译</th></tr>
+            <tr><td>链接</td><td>编译时嵌入静态库 .a/.lib</td><td>运行时加载动态库 .so/.dll</td></tr>
+            <tr><td>文件体积</td><td>大</td><td>小</td></tr>
+            <tr><td>依赖</td><td>不依赖外部库</td><td>依赖动态库</td></tr>
+            <tr><td>更新</td><td>需重编译</td><td>库可独立升级</td></tr>
+          </table>
+          <pre><code>g++ main.cpp -o main -L/path -lstaticlib    # 静态
+g++ main.cpp -o main -L/path -ldynamiclib   # 动态
+export LD_LIBRARY_PATH=/path:$LD_LIBRARY_PATH  # 运行时需找到 .so</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q53 -->
+    <div class="q" id="q53">
+      <div class="q-head" onclick="document.getElementById('b53').open=!document.getElementById('b53').open">
+        <span class="q-idx">53</span><span class="q-title">虚函数的代价是什么？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>代价：每个含虚函数的类多一张<b>虚表</b>、每个对象多一个 <b>vptr</b>（4/8 字节），且虚函数<b>无法内联</b>。</div>
+        <details id="b53">
+          <summary>展开：三重代价</summary>
+          <ul>
+            <li><b>类代价</b>：含虚函数的类生成虚表 vtable（类共享一张）。</li>
+            <li><b>对象代价</b>：每个对象多一个 vptr（32 位 4 字节/64 位 8 字节）。</li>
+            <li><b>无法内联</b>：虚函数动态调用需经 vptr 查表，编译期无法展开；派生类覆盖后内联优化失效。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q54 -->
+    <div class="q" id="q54">
+      <div class="q-head" onclick="document.getElementById('b54').open=!document.getElementById('b54').open">
+        <span class="q-idx">54</span><span class="q-title">静态函数能定义为虚函数吗？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>不能。静态函数属于类、<b>无 this 指针</b>，无法访问 vptr/vtable，与虚函数依赖对象动态类型的机制冲突。</div>
+        <details id="b54">
+          <summary>展开</summary>
+          <ul>
+            <li>静态函数可在无对象时调用，不依赖对象，故无 this。</li>
+            <li>虚函数通过 this→vptr→vtable 动态绑定；无 this 就无法参与。</li>
+            <li>但 <b>常函数可以</b>是虚函数：const 函数的 this 是 <code>const T* const this</code>，仍可访问 vptr 查虚表。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q55 -->
+    <div class="q" id="q55">
+      <div class="q-head" onclick="document.getElementById('b55').open=!document.getElementById('b55').open">
+        <span class="q-idx">55</span><span class="q-title">哪些函数不能是虚函数？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>五类不能是虚函数：<b>构造函数、内联函数、静态函数、友元函数、普通函数</b>。</div>
+        <details id="b55">
+          <summary>展开：为何不能</summary>
+          <table>
+            <tr><th>类型</th><th>原因</th></tr>
+            <tr><td>构造函数</td><td>构造时 vptr 尚未初始化，无法走虚表</td></tr>
+            <tr><td>内联函数</td><td>编译期展开，与运行期动态绑定冲突</td></tr>
+            <tr><td>静态函数</td><td>无 this，无法访问 vptr/vtable</td></tr>
+            <tr><td>友元函数</td><td>非类成员，无继承，无法进虚表</td></tr>
+            <tr><td>普通函数</td><td>不属于类，无继承/多态</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 2.3 ============ -->
+    <h2 id="s23" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">2.3 内存相关</h2>
+    <!-- Q56 -->
+    <div class="q" id="q56">
+      <div class="q-head" onclick="document.getElementById('b56').open=!document.getElementById('b56').open">
+        <span class="q-idx">56</span><span class="q-title">简要介绍 C++ 的内存分区</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>分六区：<b>栈、堆（自由存储区）、全局/静态区、常量区、代码区</b>；栈存局部变量、堆动态分配、静态区存全局/静态变量。</div>
+        <details id="b56">
+          <summary>展开：六区图解 + 说明</summary>
+          <div class="mermaid">
+flowchart TD
+    A[C++ 内存分区] --> B[栈 Stack<br>局部变量/函数参数<br>编译器自动管理]
+    A --> C[堆 Heap / 自由存储区<br>new/delete 动态分配<br>程序员显式管理]
+    A --> D[全局/静态存储区<br>全局变量/静态变量]
+    A --> E[常量存储区<br>字符串常量/const 全局变量<br>只读]
+    A --> F[代码区<br>二进制可执行代码<br>只读]
+          </div>
+          <table>
+            <tr><th>分区</th><th>内容</th><th>管理</th></tr>
+            <tr><td>栈</td><td>局部变量、函数参数</td><td>编译器自动，效率高，容量有限</td></tr>
+            <tr><td>堆</td><td>new 动态分配的对象</td><td>程序员显式 new/delete，易泄漏</td></tr>
+            <tr><td>自由存储区</td><td>new/delete 的逻辑抽象</td><td>对堆的封装（不完全等价）</td></tr>
+            <tr><td>全局/静态区</td><td>全局变量、静态变量</td><td>程序启动分配、退出释放</td></tr>
+            <tr><td>常量区</td><td>字符串常量、const 全局</td><td>只读，改则崩溃</td></tr>
+            <tr><td>代码区</td><td>二进制代码</td><td>只读</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q57 -->
+    <div class="q" id="q57">
+      <div class="q-head" onclick="document.getElementById('b57').open=!document.getElementById('b57').open">
+        <span class="q-idx">57</span><span class="q-title">C++ 内存分配了解吗？（静态 vs 动态）</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>静态分配<b>编译期完成</b>（全局/静态/局部在数据段或栈）；动态分配<b>运行时 new/delete</b>（在堆，灵活但易出错）。</div>
+        <details id="b57">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>静态分配</th><th>动态分配</th></tr>
+            <tr><td>分配时间</td><td>编译时</td><td>运行时</td></tr>
+            <tr><td>内存区域</td><td>数据段/栈段</td><td>堆区</td></tr>
+            <tr><td>管理</td><td>编译器自动</td><td>new/delete 手动</td></tr>
+            <tr><td>灵活性</td><td>固定大小</td><td>可动态调整</td></tr>
+            <tr><td>风险</td><td>基本无泄漏</td><td>易泄漏/野指针/重复释放</td></tr>
+          </table>
+          <ul>
+            <li>new：分配单个对象并调构造，delete 调析构并释放。</li>
+            <li>new[]/delete[]：分配/释放数组并调每个元素的构造/析构。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q58 -->
+    <div class="q" id="q58">
+      <div class="q-head" onclick="document.getElementById('b58').open=!document.getElementById('b58').open">
+        <span class="q-idx">58</span><span class="q-title">new 和 malloc 的区别和实现原理</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>new 是<b>运算符</b>（自动算大小、调用构造、返回类型指针、可重载）；malloc 是<b>库函数</b>（手动给字节数、不初始化、返回 void*）。</div>
+        <details id="b58">
+          <summary>展开：区别 + 底层实现</summary>
+          <table>
+            <tr><th>特性</th><th>new</th><th>malloc</th></tr>
+            <tr><td>性质</td><td>运算符</td><td>库函数</td></tr>
+            <tr><td>大小</td><td>自动计算</td><td>手动指定字节数</td></tr>
+            <tr><td>构造/析构</td><td>自动调用</td><td>不调用</td></tr>
+            <tr><td>返回</td><td>类型化指针</td><td>void*（需强转）</td></tr>
+            <tr><td>可重载</td><td>可</td><td>不可</td></tr>
+          </table>
+          <h3 class="detail">底层实现</h3>
+          <ul>
+            <li><b>malloc</b>：&lt;128KB 用 <code>brk()</code> 从堆分配；&gt;128KB 用 <code>mmap()</code>；内存池管理、隐式链表组织空闲块。</li>
+            <li><b>new</b>：调 <code>operator new</code>（内部通常调 malloc）分配内存 → 调构造函数初始化 → 返回类型化指针；delete 先析构再 <code>operator delete</code>。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q59 -->
+    <div class="q" id="q59">
+      <div class="q-head" onclick="document.getElementById('b59').open=!document.getElementById('b59').open">
+        <span class="q-idx">59</span><span class="q-title">new/delete 与 malloc/free 的异同</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>new/delete 是运算符、自动算大小/调构造/抛异常；malloc/free 是库函数、手动算字节/不调构造/失败返回 NULL。</div>
+        <details id="b59">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>new/delete</th><th>malloc/free</th></tr>
+            <tr><td>语法</td><td>运算符</td><td>库函数</td></tr>
+            <tr><td>大小</td><td>自动计算</td><td>手动计算</td></tr>
+            <tr><td>类型安全</td><td>返回指定类型指针</td><td>返回 void*</td></tr>
+            <tr><td>构造/析构</td><td>调用</td><td>不调用</td></tr>
+            <tr><td>错误处理</td><td>抛 std::bad_alloc</td><td>返回 NULL</td></tr>
+            <tr><td>库依赖</td><td>无</td><td>需标准库</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q60 -->
+    <div class="q" id="q60">
+      <div class="q-head" onclick="document.getElementById('b60').open=!document.getElementById('b60').open">
+        <span class="q-idx">60</span><span class="q-title">为什么有了 new/delete 还需要 malloc/free？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>职责不同：malloc/free <b>只管理内存</b>（C 兼容、可嵌入），new/delete 负责<b>对象构造/析构 + 异常 + 类型安全</b>。</div>
+        <details id="b60">
+          <summary>展开</summary>
+          <ul>
+            <li><b>构造/析构</b>：新/删非基本类型时 new 调构造、delete 调析构，malloc/free 无法完成。</li>
+            <li><b>类型安全</b>：new 返回具体类型，malloc 返回 void* 需强转。</li>
+            <li><b>异常</b>：new 失败抛 std::bad_alloc，malloc 返回 NULL 需手查。</li>
+            <li><b>场景</b>：与 C 代码混用、底层内存块操作时仍需要 malloc/free。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q61 -->
+    <div class="q" id="q61">
+      <div class="q-head" onclick="document.getElementById('b61').open=!document.getElementById('b61').open">
+        <span class="q-idx">61</span><span class="q-title">被 free 回收的内存是立即返还给操作系统吗？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>不是。free 后内存先被<b>内存分配器（ptmalloc）缓存</b>供下次复用，只有堆顶满足条件时才用 brk/mmap 归还 OS。</div>
+        <details id="b61">
+          <summary>展开：过程 + 为何不立即归还</summary>
+          <ol>
+            <li><b>回收</b>：free 标为空闲，放入分配器维护的双链表，不立即归还 OS。</li>
+            <li><b>复用</b>：下次分配先从空闲链表找合适块。</li>
+            <li><b>碎片合并</b>：合并相邻空闲块成大块。</li>
+            <li><b>归还条件</b>：空闲块位于堆顶 + 超过阈值，才调 brk/mmap 收缩堆。</li>
+          </ol>
+          <ul>
+            <li><b>为什么不立即还</b>：减少系统调用、提高分配效率、减少碎片。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q62 -->
+    <div class="q" id="q62">
+      <div class="q-head" onclick="document.getElementById('b62').open=!document.getElementById('b62').open">
+        <span class="q-idx">62</span><span class="q-title">delete p、delete[] p、allocator 都有什么作用？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>delete p 释放单对象、delete[] p 按逆序析构并释放数组、allocator 把<b>内存分配与对象构造分离</b>。</div>
+        <details id="b62">
+          <summary>展开：三者职责</summary>
+          <table>
+            <tr><th>操作</th><th>作用</th></tr>
+            <tr><td><code>delete p</code></td><td>调析构清理资源 + 释放单对象内存</td></tr>
+            <tr><td><code>delete[] p</code></td><td>从后向前调用所有元素析构 + 释放数组内存</td></tr>
+            <tr><td><code>std::allocator</code></td><td>allocate 分配未初始化内存 / construct 构造 / destroy 析构 / deallocate 释放</td></tr>
+          </table>
+          <pre><code>int* p = new int(42);        delete p;
+int* arr = new int[5];       delete[] arr;
+
+std::allocator&lt;int&gt; alloc;
+int* p = alloc.allocate(5);      // 分配未初始化内存
+alloc.construct(p, 42);          // 在内存上构造对象
+alloc.destroy(p);                // 析构
+alloc.deallocate(p, 5);          // 释放内存</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q63 -->
+    <div class="q" id="q63">
+      <div class="q-head" onclick="document.getElementById('b63').open=!document.getElementById('b63').open">
+        <span class="q-idx">63</span><span class="q-title">malloc 申请的存储空间能用 delete 释放吗？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>不能。二者底层实现不同，混用属<b>未定义行为</b>；应始终 <code>malloc↔free</code>、<code>new↔delete</code> 配对。</div>
+        <details id="b63">
+          <summary>展开</summary>
+          <ul><li>保持一致性：malloc 分配 → free 释放；new 分配 → delete 释放。</li></ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q64 -->
+    <div class="q" id="q64">
+      <div class="q-head" onclick="document.getElementById('b64').open=!document.getElementById('b64').open">
+        <span class="q-idx">64</span><span class="q-title">内存泄漏、内存越界</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>泄漏=<b>分配未释放</b>（资源浪费）；越界=<b>访问未授权内存</b>（未定义行为）；用智能指针/边界检查/Tool 预防。</div>
+        <details id="b64">
+          <summary>展开：定义 + 检测/预防</summary>
+          <table>
+            <tr><th>特性</th><th>内存泄漏</th><th>内存越界</th></tr>
+            <tr><td>定义</td><td>动态内存未释放，资源浪费</td><td>访问未授权内存区域</td></tr>
+            <tr><td>常见原因</td><td>new/malloc 未释放；基类析构非虚</td><td>数组下标越界、悬空/未初始化指针、栈溢出</td></tr>
+            <tr><td>后果</td><td>耗尽系统内存</td><td>未定义行为、崩溃/错误结果</td></tr>
+            <tr><td>检测</td><td>Valgrind、智能指针</td><td>AddressSanitizer、工具检测</td></tr>
+            <tr><td>预防</td><td>良好习惯、用智能指针</td><td>STL 容器、边界检查、初始化指针</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q65 -->
+    <div class="q" id="q65">
+      <div class="q-head" onclick="document.getElementById('b65').open=!document.getElementById('b65').open">
+        <span class="q-idx">65</span><span class="q-title">STL 库的内存配置：一级和二级配置器</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>一级配置器管<b>大块内存</b>（直调 malloc/free）；二级配置器用<b>内存池</b>管小于 128B 的小块，减少碎片与开销。</div>
+        <details id="b65">
+          <summary>展开</summary>
+          <ul>
+            <li><b>一级配置器</b>：分配大块内存，直接用 malloc/free 或 new/delete。</li>
+            <li><b>二级配置器</b>：小内存（&lt;128B）用内存池，预分配大块切成固定小块（8/16/32B），池耗尽再向一级申请。</li>
+            <li><b>为何 128B 阈值</b>：性能/碎片权衡 + 大多数小对象 &lt;128B + 缓存对齐。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q66 -->
+    <div class="q" id="q66">
+      <div class="q-head" onclick="document.getElementById('b66').open=!document.getElementById('b66').open">
+        <span class="q-idx">66</span><span class="q-title">介绍一下你了解的内存配置和内存分配？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>分配分静态/动态/栈三类；策略有连续分配、分页、分段；管理靠内存池，C/C++ 无 GC 需手动释放。</div>
+        <details id="b66">
+          <summary>展开</summary>
+          <h3 class="detail">分配类型</h3>
+          <ul>
+            <li>静态：编译期，全局/静态区，生命周期全程。</li>
+            <li>动态：运行期 malloc/new 在堆，free/delete 释放。</li>
+            <li>栈：局部变量/调用信息，编译器自动，先进后出、速度极高。</li>
+          </ul>
+          <h3 class="detail">分配策略</h3>
+          <ul>
+            <li>连续分配（数组，缓存友好但可能碎片）；分页（4KB 页，虚拟内存）；分段（代码/数据/栈段，权限控制）。</li>
+            <li>内存池：预分配大块，减少系统调用与碎片；C/C++ 无内建 GC。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q67 -->
+    <div class="q" id="q67">
+      <div class="q-head" onclick="document.getElementById('b67').open=!document.getElementById('b67').open">
+        <span class="q-idx">67</span><span class="q-title">哪些地方会用到栈？有关注过 Flash 和 RAM 吗？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>栈用于函数调用、中断处理、任务切换的现场保存；嵌入式里代码存 <b>Flash</b>（非易失），栈/堆/运行数据在 <b>RAM</b>（易失）。</div>
+        <details id="b67">
+          <summary>展开</summary>
+          <ul>
+            <li><b>函数调用</b>：参数、局部变量、返回地址压栈管理调用/返回。</li>
+            <li><b>中断处理</b>：保存程序计数器、寄存器等现场，恢复后返回。</li>
+            <li><b>任务切换</b>：保存当前任务状态，恢复下一任务。</li>
+            <li><b>Flash</b>：非易失，存代码与长期配置；<b>RAM</b>：易失，存栈/堆/全局/静态及缓存。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q68 -->
+    <div class="q" id="q68">
+      <div class="q-head" onclick="document.getElementById('b68').open=!document.getElementById('b68').open">
+        <span class="q-idx">68</span><span class="q-title">堆和栈的区别？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>栈由编译器自动管理、连续、快、向低地址增长、容量小；堆由程序员管理、不连续、慢、向高地址增长、容量大。</div>
+        <details id="b68">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>堆</th><th>栈</th></tr>
+            <tr><td>管理</td><td>程序员 new/delete</td><td>编译器自动</td></tr>
+            <tr><td>空间</td><td>不连续、大（近 4GB）</td><td>连续、小（默认 1~2MB）</td></tr>
+            <tr><td>碎片</td><td>频繁 new/delete 产生碎片</td><td>连续分配，无碎片</td></tr>
+            <tr><td>生长方向</td><td>向高地址</td><td>向低地址</td></tr>
+            <tr><td>效率</td><td>较低（链表查找空闲块）</td><td>高（专用寄存器/指针加减）</td></tr>
+            <tr><td>场景</td><td>大对象、跨函数生命周期的数据</td><td>局部变量、临时数据</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q69 -->
+    <div class="q" id="q69">
+      <div class="q-head" onclick="document.getElementById('b69').open=!document.getElementById('b69').open">
+        <span class="q-idx">69</span><span class="q-title">堆快还是栈快？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>栈快。栈有 CPU 底层支持（专用栈指针寄存器、连续分配）；堆需算法遍历空闲链表、非连续两次寻址，开销更大。</div>
+        <details id="b69">
+          <summary>展开：四点原因</summary>
+          <ul>
+            <li><b>系统支持</b>：栈有专用寄存器存栈指针，入/出栈仅指针加减。</li>
+            <li><b>操作机制</b>：栈自动分配连续内存；堆靠 malloc/new 算法找空闲块。</li>
+            <li><b>访问效率</b>：栈连续、直接寻址；堆非连续、两次寻址（经指针）。</li>
+            <li><b>复杂性</b>：栈只管理一个指针；堆需链表/内存池、碎片合并。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q70 -->
+    <div class="q" id="q70">
+      <div class="q-head" onclick="document.getElementById('b70').open=!document.getElementById('b70').open">
+        <span class="q-idx">70</span><span class="q-title">C++ 中类的数据成员和成员函数的内存分布</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>非静态数据成员<b>存对象内</b>（含对齐）；成员函数<b>存代码区共享一份</b>（不占对象）；静态成员存<b>全局/静态区</b>。</div>
+        <details id="b70">
+          <summary>展开：内存分布</summary>
+          <div class="mermaid">
+flowchart TD
+    A[类 Test] --> B[对象 obj<br>首地址=第一个成员地址]
+    B --> C[非静态成员变量<br>按声明顺序+内存对齐存储]
+    A --> D[成员函数<br>存代码区, 所有对象共享一份]
+    A --> E[静态成员变量<br>存全局/静态区, 类内共享]
+    A --> F[this 指针<br>成员函数调用时临时传递, 不占对象]
+          </div>
+          <ul>
+            <li>对象大小 = 所有非静态成员（含对齐）之和；成员函数不计入对象大小。</li>
+            <li>静态成员变量不属于具体对象、不影响 sizeof；静态函数无 this 指针。</li>
+            <li>this 指针是调用时隐式传递的临时参数，不占对象存储。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q71 -->
+    <div class="q" id="q71">
+      <div class="q-head" onclick="document.getElementById('b71').open=!document.getElementById('b71').open">
+        <span class="q-idx">71</span><span class="q-title">静态变量什么时候初始化？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>初始化只有一次：C 中<b>程序运行前（编译期）</b>初始化；C++ 中静态局部变量<b>首次执行到时才初始化</b>（支持类构造）。</div>
+        <details id="b71">
+          <summary>展开：C vs C++ 差异</summary>
+          <ul>
+            <li>静态变量内存程序运行前已分配；初始化只一次、可多次赋值。</li>
+            <li><b>C</b>：静态局部变量在程序运行前（编译期）初始化，不能用运行时变量值初始化。</li>
+            <li><b>C++</b>：静态局部变量首次执行到才初始化（按需），可用其他变量初始化，因需支持对象的构造/析构。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q72 -->
+    <div class="q" id="q72">
+      <div class="q-head" onclick="document.getElementById('b72').open=!document.getElementById('b72').open">
+        <span class="q-idx">72</span><span class="q-title">关于 this 指针你知道什么？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>this 是<b>非静态成员函数</b>的隐含参数，指向调用对象的首地址，用于访问成员/返回 *this 链式调用。</div>
+        <details id="b72">
+          <summary>展开：概念 + 特点</summary>
+          <ul>
+            <li>只有非静态成员函数能用 this；全局/静态函数无 this。</li>
+            <li>编译器在成员函数隐式加 <code>T* const this</code> 参数。</li>
+            <li>区分同名参数与成员：<code>this-&gt;x = x;</code>。</li>
+            <li>链式调用：<code>return *this;</code>。</li>
+            <li>this 不占对象内存、不影响 sizeof；生命周期=函数执行期；常通过寄存器（ecx）传递，效率高。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q73 -->
+    <div class="q" id="q73">
+      <div class="q-head" onclick="document.getElementById('b73').open=!document.getElementById('b73').open">
+        <span class="q-idx">73</span><span class="q-title">关于 this 指针的常见问题</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>this 在成员函数执行前创建、结束后清除；存放位置取决于编译器实现；通过<b>偏移量</b>访问成员。</div>
+        <details id="b73">
+          <summary>展开</summary>
+          <ul>
+            <li><b>创建时机</b>：成员函数执行前创建，结束后清除；无方法的类无 this。</li>
+            <li><b>存放位置</b>：编译器相关——栈/寄存器/全局变量；汇编层可能为立即数/寄存器值/内存变量。</li>
+            <li><b>访问成员</b>：类似结构体指针，按对象地址 + 成员偏移量访问。</li>
+            <li><b>是否建函数表</b>：普通函数/静态函数不建函数表，只有含虚函数的类才建虚表。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q74 -->
+    <div class="q" id="q74">
+      <div class="q-head" onclick="document.getElementById('b74').open=!document.getElementById('b74').open">
+        <span class="q-idx">74</span><span class="q-title">下面几个类的大小各是多少？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>空类=1 字节；只含虚函数=一个 vptr（4/8 字节）；含静态成员不影响大小；含普通成员按成员+对齐计算。</div>
+        <details id="b74">
+          <summary>展开：sizeof 规则 + 例子</summary>
+          <pre><code>class A {};                    // sizeof = 1（空类占位）
+class B { virtual void f(){} };// sizeof = 4(32位)/8(64位) vptr
+class C { static int a; };     // sizeof = 1（静态成员不计）
+class D { static int a; int b; }; // sizeof = 4（只算非静态成员 b）
+class E { int a; };            // sizeof = 4</code></pre>
+        <table>
+          <tr><th>规则</th><th>大小</th></tr>
+          <tr><td>空类</td><td>1 字节（保证独立地址）</td></tr>
+          <tr><td>有虚函数</td><td>+vptr（32 位 4B / 64 位 8B）</td></tr>
+          <tr><td>静态成员</td><td>不影响对象大小</td></tr>
+          <tr><td>普通成员</td><td>成员大小 + 内存对齐</td></tr>
+        </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q75 -->
+    <div class="q" id="q75">
+      <div class="q-head" onclick="document.getElementById('b75').open=!document.getElementById('b75').open">
+        <span class="q-idx">75</span><span class="q-title">介绍一下内存对齐以及原因</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>为让 CPU 高效访问，把数据地址按类型大小对齐：成员偏移=其类型大小整数倍，结构体整体=最大成员整数倍，可用 <code>#pragma pack</code> 调整。</div>
+        <details id="b75">
+          <summary>展开：规则 + 代码</summary>
+          <ul>
+            <li>成员偏移满足自身对齐；结构体整体为最大对齐单位整数倍；声明顺序影响布局。</li>
+            <li><code>#pragma pack(n)</code>：偏移取 min(n, 类型大小) 的整数倍。</li>
+          </ul>
+          <pre><code>struct A { char a; int b; short c; };  // sizeof = 12
+// a@0, 补1, b@4, c@8~9, 整体补到 4 倍数 = 12
+
+#pragma pack(2)
+struct B { char a; int b; short c; };  // sizeof = 8（2 字节对齐）</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 2.4 ============ -->
+    <h2 id="s24" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">2.4 容器</h2>
+    <!-- Q76 -->
+    <div class="q" id="q76">
+      <div class="q-head" onclick="document.getElementById('b76').open=!document.getElementById('b76').open">
+        <span class="q-idx">76</span><span class="q-title">概述：常用 STL 容器底层实现与复杂度一览</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>顺序容器（vector/deque/list）与关联容器（红黑树 map/set、哈希表 unordered 系列）在「底层、插入/查看/删除复杂度」上各有权衡，按访问模式选。</div>
+        <details id="b76">
+          <summary>展开：容器复杂度总表</summary>
+          <table>
+            <tr><th>容器</th><th>底层实现</th><th>特点</th><th>插入</th><th>查看</th><th>删除</th></tr>
+            <tr><td>vector</td><td>动态数组</td><td>连续存储、随机访问快，插入删除需移动元素</td><td>O(N)</td><td>O(1)</td><td>O(N)</td></tr>
+            <tr><td>deque</td><td>双向队列（分段数组）</td><td>两端高效插入删除，随机访问次于 vector</td><td>O(N)</td><td>O(1)</td><td>O(N)</td></tr>
+            <tr><td>list</td><td>双向链表</td><td>不支持随机访问，任意位置插入删除高效</td><td>O(1)</td><td>O(N)</td><td>O(1)</td></tr>
+            <tr><td>map / set</td><td>红黑树</td><td>有序存储，插入删除自动排序</td><td>O(logN)</td><td>O(logN)</td><td>O(logN)</td></tr>
+            <tr><td>multimap / multiset</td><td>红黑树</td><td>支持重复键，其余同 map/set</td><td>O(logN)</td><td>O(logN)</td><td>O(logN)</td></tr>
+            <tr><td>unordered_map / unordered_set</td><td>哈希表</td><td>无序、均摊 O(1) 查找，最坏 O(N)</td><td>O(1)(最坏O(N))</td><td>O(1)(最坏O(N))</td><td>O(1)(最坏O(N))</td></tr>
+            <tr><td>unordered_multimap / unordered_multiset</td><td>哈希表</td><td>允许重复键的无序容器</td><td>O(1)(最坏O(N))</td><td>O(1)(最坏O(N))</td><td>O(1)(最坏O(N))</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q77 -->
+    <div class="q" id="q77">
+      <div class="q-head" onclick="document.getElementById('b77').open=!document.getElementById('b77').open">
+        <span class="q-idx">77</span><span class="q-title">介绍一下常用 STL 的容器？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>容器都是模板类，分三类：顺序容器（vector/deque/list）、关联容器（红黑树 set/map 等）、无序关联容器（哈希表 unordered 系列）、容器适配器（stack/queue/priority_queue）。</div>
+        <details id="b77">
+          <summary>展开：分类与选型</summary>
+          <h3 class="detail">（1）顺序容器</h3>
+          <ul>
+            <li><b>vector</b>：连续动态数组，频繁随机访问+尾部操作；中间插入/删除会重分配、性能差。</li>
+            <li><b>deque</b>：分段数组，两端高频操作；随机访问次于 vector。</li>
+            <li><b>list</b>：双向链表，频繁中段插入/删除；不支持随机访问。</li>
+          </ul>
+          <h3 class="detail">（2）关联容器（红黑树）</h3>
+          <ul>
+            <li><b>set / map</b>：基于红黑树，键有序，插入/查找/删除均 O(logN)；map 每个节点为键值对。</li>
+            <li><b>multiset / multimap</b>：允许键重复。</li>
+          </ul>
+          <h3 class="detail">（3）无序关联容器（哈希表）</h3>
+          <ul>
+            <li><b>unordered_set / unordered_map</b>：哈希表，均摊 O(1) 查找，最坏退化 O(N)。</li>
+            <li><b>unordered_multiset / unordered_multimap</b>：允许键重复。</li>
+          </ul>
+          <h3 class="detail">（4）容器适配器</h3>
+          <ul>
+            <li><b>stack</b>：默认 deque 实现，后进先出。</li>
+            <li><b>queue</b>：默认 deque 实现，先进先出。</li>
+            <li><b>priority_queue</b>：基于堆实现，按优先级出队。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q78 -->
+    <div class="q" id="q78">
+      <div class="q-head" onclick="document.getElementById('b78').open=!document.getElementById('b78').open">
+        <span class="q-idx">78</span><span class="q-title">deque 底层？块和块是如何连接起来的？</span><span class="stars st1">★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>deque 底层是「分段数组」：多个定长内存块经一个中央指针数组（map）连接，两端各有指针支持高效头尾插删。</div>
+        <details id="b78">
+          <summary>展开：块与 map</summary>
+          <ul>
+            <li><b>块（block）</b>：每块是定长数组，存若干元素（如 512/1024 个，实现决定）。</li>
+            <li><b>指针数组（map）</b>：核心管理结构，每个元素指向一个块；map 本身可动态扩缩。</li>
+            <li><b>连接方式</b>：map 记录各块地址，使所有块逻辑上连成连续序列。</li>
+            <li><b>双端扩展</b>：头尾各有指针指向首/末块；一端已满则分配新块并更新 map。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q79 -->
+    <div class="q" id="q79">
+      <div class="q-head" onclick="document.getElementById('b79').open=!document.getElementById('b79').open">
+        <span class="q-idx">79</span><span class="q-title">实现 vector、stack、queue 和 string</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>手撕高频题：vector 关注扩容三指针与拷贝；stack/queue 借助底层容器适配；string 关注深浅拷贝与 COW。</div>
+        <details id="b79">
+          <summary>展开：手撕要点</summary>
+          <ul>
+            <li><b>vector</b>：维护 <code>_start/_finish/_end_of_storage</code> 三指针；插入满则分配 2 倍空间并拷贝。</li>
+            <li><b>stack / queue</b>：作为容器适配器，默认用 deque 实现 push/pop/top。</li>
+            <li><b>string</b>：动态字符数组，重点处理拷贝构造（深拷贝）与赋值、容量管理。</li>
+            <li>完整手撕代码见原书「手撕代码」章节。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q80 -->
+    <div class="q" id="q80">
+      <div class="q-head" onclick="document.getElementById('b80').open=!document.getElementById('b80').open">
+        <span class="q-idx">80</span><span class="q-title">介绍 vector 扩容原理</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>当 <code>size()==capacity()</code> 再插入时，vector 按约 2 倍分配新空间 → 拷贝/移动旧数据 → 释放旧内存 → 更新指针；缩容不会主动回收（除非 <code>shrink_to_fit()</code>）。</div>
+        <details id="b80">
+          <summary>展开：扩容四步</summary>
+          <div class="mermaid">
+flowchart TD
+    A["size() == capacity() 且插入新元素"] --> B["倍增分配新空间<br>通常 2 倍 (或 1.5 倍)"]
+    B --> C["拷贝/移动旧数据到新空间"]
+    C --> D["释放旧内存空间"]
+    D --> E["更新指针指向新内存"]
+          </div>
+          <ul>
+            <li><b>size()</b> = 已存元素个数；<b>capacity()</b> = 已分配的总空间；容量-大小 = 剩余可用。</li>
+            <li>vector 内存分配在<b>堆区</b>，元素连续存储。</li>
+            <li>扩容倍数与编译器实现相关（常见 2 倍或 1.5 倍），会造成内存分配+数据拷贝的性能开销。</li>
+            <li>容量不会随元素减少自动缩小，需显式 <code>shrink_to_fit()</code> 或 swap 空 vector。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q81 -->
+    <div class="q" id="q81">
+      <div class="q-head" onclick="document.getElementById('b81').open=!document.getElementById('b81').open">
+        <span class="q-idx">81</span><span class="q-title">vector 在哪个区分配内存？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>vector 元素内存分配在<b>堆区</b>，因为它是运行时动态增长/缩小的动态数组，只有堆能满足动态容量 + 连续存储。</div>
+        <details id="b81">
+          <summary>展开：为什么是堆区</summary>
+          <ul>
+            <li>vector 大小在运行时动态变化，堆内存专为动态分配设计。</li>
+            <li>需保证元素连续存储，堆上可分配任意大小的连续块。</li>
+            <li><b>注意</b>：vector 对象本身（三指针）若为局部变量仍在栈上，但它<b>指向的元素数据在堆上</b>。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q82 -->
+    <div class="q" id="q82">
+      <div class="q-head" onclick="document.getElementById('b82').open=!document.getElementById('b82').open">
+        <span class="q-idx">82</span><span class="q-title">你平时用 unordered_map 做什么？</span><span class="stars st1">★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>利用其 O(1) 平均查找 + 键唯一性，做缓存、字典/键值存储、去重、频率统计。</div>
+        <details id="b82">
+          <summary>展开：四个典型用途</summary>
+          <ul>
+            <li><b>快速查找/缓存</b>：键映射到值，快速检索（如接口结果缓存）。</li>
+            <li><b>存储键值对</b>：构建字典、关联数组。</li>
+            <li><b>去重</b>：键唯一，插入后统计 size 得唯一元素个数。</li>
+            <li><b>频率统计</b>：键为元素、值为出现次数（如统计词频）。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q83 -->
+    <div class="q" id="q83">
+      <div class="q-head" onclick="document.getElementById('b83').open=!document.getElementById('b83').open">
+        <span class="q-idx">83</span><span class="q-title">迭代器 ++it、it++ 哪个好？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>++it</code>（前置）更好：直接返回自增后引用、无临时对象；<code>it++</code>（后置）要先保存副本、多一次拷贝。</div>
+        <details id="b83">
+          <summary>展开：我为什么用前置</summary>
+          <table>
+            <tr><th></th><th>++it（前置自增）</th><th>it++（后置自增）</th></tr>
+            <tr><td>返回值</td><td>自增后的自身引用</td><td>保存的旧拷贝</td></tr>
+            <tr><td>临时对象</td><td>无</td><td>创建副本，额外构造/拷贝/销毁开销</td></tr>
+            <tr><td>性能</td><td>高</td><td>低</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q84 -->
+    <div class="q" id="q84">
+      <div class="q-head" onclick="document.getElementById('b84').open=!document.getElementById('b84').open">
+        <span class="q-idx">84</span><span class="q-title">C++ 左值引用和右值引用是啥？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>左值引用 (<code>T&amp;</code>) 绑定具名对象做别名；右值引用 (<code>T&amp;&amp;</code>) 绑定临时值并延长其生命周期，派生出移动语义和完美转发两大优化。</div>
+        <details id="b84">
+          <summary>展开：定义与示例</summary>
+          <ul>
+            <li><b>左值</b>：可取地址、有名字、生命周期长（<code>int a=10</code> 的 a）。</li>
+            <li><b>右值</b>：无法取地址的临时值（字面量 <code>42</code>、表达式 <code>a+b</code>、函数返回值）。</li>
+            <li><b>纯右值（prvalue）</b>：字面量、表达式结果；<b>将亡值（xvalue）</b>：<code>std::move</code> 返回值等右值引用表达式。</li>
+            <li>右值引用绑定临时值后其生命周期延长至该引用变量的生命周期（如 <code>int&amp;&amp; r = 42;</code>）。</li>
+          </ul>
+          <pre><code>void process(int&amp; x)  { std::cout &lt;&lt; "LValue\n"; }
+void process(int&amp;&amp; x) { std::cout &lt;&lt; "RValue\n"; }
+int a = 10;
+process(a);            // LValue
+process(std::move(a)); // RValue（转成右值）
+process(20);           // RValue（字面量）</code></pre>
+          <ul>
+            <li>移动语义：<code>std::string s2 = std::move(s1);</code> 转移资源避免深拷贝。</li>
+            <li>完美转发：模板中用 <code>std::forward</code> 按实参真实值类别转发。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q85 -->
+    <div class="q" id="q85">
+      <div class="q-head" onclick="document.getElementById('b85').open=!document.getElementById('b85').open">
+        <span class="q-idx">85</span><span class="q-title">STL 中 hashtable 的实现原理？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>STL hashtable 用<b>开链法</b>：若干个桶（bucket，由 vector 管理的指针数组），每桶一条自实现单向链表存冲突元素；桶数取一组固定质数，装填超限触发 rehashing。</div>
+        <details id="b85">
+          <summary>展开：结构与扩容</summary>
+          <ul>
+            <li><b>桶</b>：本质是 vector 管理的指针数组，每指针指向一条链表头。</li>
+            <li><b>节点</b>：并非标准 list/slist，而是 hashtable 自定义的 hashtable_node。</li>
+            <li><b>质数桶数</b>：用 [53, 97, 193, …, 429496729] 一组质数做桶数量，哈希均匀分布。</li>
+            <li><b>rehashing</b>：元素数超当前桶容量时，扩到下一更大质数容量并重新哈希全部元素。</li>
+            <li><b>迭代器</b>：只支持单向遍历（链表单向）。</li>
+            <li>可自定义哈希函数；开链法带来链表额外内存开销。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q86 -->
+    <div class="q" id="q86">
+      <div class="q-head" onclick="document.getElementById('b86').open=!document.getElementById('b86').open">
+        <span class="q-idx">86</span><span class="q-title">hashtable 中解决冲突有哪些方法？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>五种：线性探测、二次探测、再散列（双哈希）、开链法、公共溢出区；最常用是线性探测、开链法、再散列。</div>
+        <details id="b86">
+          <summary>展开：五种方法对比</summary>
+          <table>
+            <tr><th>方法</th><th>思路</th><th>特点/问题</th></tr>
+            <tr><td>线性探测</td><td>占用则步长 1 向后找空位，到表尾回表头</td><td>简单高效，易「一次聚集」</td></tr>
+            <tr><td>二次探测</td><td>按 1²,2²,3²… 偏移找空位</td><td>缓解一次聚集，仍可能二次聚集</td></tr>
+            <tr><td>再散列（双哈希）</td><td>冲突后用另一哈希函数重算地址</td><td>避免聚集，需额外哈希函数</td></tr>
+            <tr><td>开链法</td><td>每桶一条链表存冲突元素</td><td>扩展性好，链表有额外时间开销</td></tr>
+            <tr><td>公共溢出区</td><td>冲突元素统一存溢出区</td><td>实现简单，查询效率较低</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q87 -->
+    <div class="q" id="q87">
+      <div class="q-head" onclick="document.getElementById('b87').open=!document.getElementById('b87').open">
+        <span class="q-idx">87</span><span class="q-title">STL 的迭代器是如何实现的？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>迭代器是「容器与算法的粘合剂」：内部封装指向元素的指针，重载 <code>*</code>、<code>-&gt;</code>、<code>++</code>、<code>--</code> 等运算符实现遍历，设计上类似智能指针。</div>
+        <details id="b87">
+          <summary>展开：作用与五大型别</summary>
+          <ul>
+            <li><b>作用</b>：提供统一接口遍历容器元素；解引用 <code>*</code> 与成员访问 <code>-&gt;</code> 访问元素，<code>++/--</code> 前后移动。</li>
+            <li><b>本质</b>：一个封装了容器相关指针的对象，通过运算符重载实现遍历。</li>
+          </ul>
+          <h3 class="detail">五要素型别（traits）</h3>
+          <ul>
+            <li><code>value_type</code>：所指向值的类型（vector&lt;int&gt; 即 int）。</li>
+            <li><code>difference_type</code>：两迭代器距离的整数类型。</li>
+            <li><code>pointer</code>：元素指针类型（int*）。</li>
+            <li><code>reference</code>：元素引用类型（int&amp;）。</li>
+            <li><code>iterator_category</code>：迭代器类别。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q88 -->
+    <div class="q" id="q88">
+      <div class="q-head" onclick="document.getElementById('b88').open=!document.getElementById('b88').open">
+        <span class="q-idx">88</span><span class="q-title">map 插入方式有哪几种？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>四种：<code>insert(pair)</code>、<code>insert(value_type)</code>、<code>insert(make_pair)</code>、<code>operator[]</code>；区别是 insert 遇已存在键不覆盖，<code>[]</code> 会覆盖。</div>
+        <details id="b88">
+          <summary>展开：四种写法</summary>
+          <pre><code>std::map&lt;int, std::string&gt; mapStudent;
+// 1) insert + pair
+mapStudent.insert(std::pair&lt;int,std::string&gt;(1, "one"));
+// 2) insert + value_type
+mapStudent.insert(std::map&lt;int,std::string&gt;::value_type(1, "one"));
+// 3) insert + make_pair
+mapStudent.insert(std::make_pair(1, "one"));
+// 4) operator[]（键不存在则插入，已存在则覆盖值）
+mapStudent[1] = "one";</code></pre>
+          <ul>
+            <li>前三种若键已存在，<b>不覆盖</b>原值（insert 失败）。</li>
+            <li><code>[]</code> 若键不存在则插入，已存在则更新值。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q89 -->
+    <div class="q" id="q89">
+      <div class="q-head" onclick="document.getElementById('b89').open=!document.getElementById('b89').open">
+        <span class="q-idx">89</span><span class="q-title">vector、map 越界访问下标会咋样？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>vector 的 <code>[]</code> 不做边界检查、越界是<b>未定义行为</b>（用 <code>at()</code> 抛异常）；map 的 <code>[]</code> 用不存在键会<b>直接插入</b>一个默认值。</div>
+        <details id="b89">
+          <summary>展开：两者差异</summary>
+          <pre><code>std::vector&lt;int&gt; vec = {1,2,3};
+vec[10];     // 未定义行为，无边界检查
+vec.at(10);  // 抛出 std::out_of_range
+
+std::map&lt;int,std::string&gt; m;
+m[1] = "one";
+m[2];        // 自动插入键值对 (2, "")，值是默认构造</code></pre>
+          <ul>
+            <li>vector 越界可能崩溃、读到/改到其他内存；需要安全用 <code>at()</code>。</li>
+            <li>map 找不到键不报错，而是插入默认值（int→0，string→""）。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q90 -->
+    <div class="q" id="q90">
+      <div class="q-head" onclick="document.getElementById('b90').open=!document.getElementById('b90').open">
+        <span class="q-idx">90</span><span class="q-title">map 中 [] 与 find 的区别？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>[]</code> 会读/写并可能「意外插入」，有副作用；<code>find()</code> 只查询不修改，返回迭代器（未找到返回 <code>end()</code>）。</div>
+        <details id="b90">
+          <summary>展开：对比</summary>
+          <table>
+            <tr><th></th><th>operator[]</th><th>find()</th></tr>
+            <tr><td>作用</td><td>按键返回/修改值</td><td>仅查询键是否存在</td></tr>
+            <tr><td>键不存在时</td><td>自动插入默认值（副作用）</td><td>不修改，返回 end()</td></tr>
+            <tr><td>返回</td><td>值的引用</td><td>迭代器</td></tr>
+            <tr><td>适用</td><td>需要读写或初始化</td><td>只想检测键是否存在</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+    <!-- ============ 2.5 ============ -->
+    <h2 id="s25" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">2.5 智能指针</h2>
+    <!-- Q91 -->
+    <div class="q" id="q91">
+      <div class="q-head" onclick="document.getElementById('b91').open=!document.getElementById('b91').open">
+        <span class="q-idx">91</span><span class="q-title">介绍一下智能指针？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>智能指针用 RAII 在出作用域时自动释放动态内存，防泄漏与非法访问；C++11 提供 unique_ptr（独占）、shared_ptr（共享/引用计数）、weak_ptr（弱引用，破循环引用），取代已废弃的 auto_ptr。</div>
+        <details id="b91">
+          <summary>展开：三种指针</summary>
+          <table>
+            <tr><th>类型</th><th>所有权</th><th>特点</th><th>适用</th></tr>
+            <tr><td>unique_ptr</td><td>独占</td><td>同一时间只有一个持有者；禁止拷贝，用 move 转移</td><td>文件句柄、设备连接等明确独占资源</td></tr>
+            <tr><td>shared_ptr</td><td>共享</td><td>引用计数（use_count）跟踪，最后一个销毁时释放</td><td>多对象/多线程共享同一资源</td></tr>
+            <tr><td>weak_ptr</td><td>弱引用</td><td>不增加引用计数，lock() 转 shared_ptr</td><td>破循环引用、观察者</td></tr>
+          </table>
+          <pre><code>auto u1 = std::make_unique&lt;int&gt;(10);   // 独占
+auto u2 = std::move(u1);                // 转移所有权，u1 空
+auto s1 = std::make_shared&lt;int&gt;(10);
+auto s2 = s1;                           // use_count = 2
+std::weak_ptr&lt;int&gt; w = s1;
+if (auto sp = w.lock()) { /* 资源仍存活 */ }</code></pre>
+          <ul>
+            <li>引用计数增减自动完成；多线程同时访问同一 shared_ptr 仍需加锁。</li>
+            <li>两个 shared_ptr 互相引用会循环引用，需 weak_ptr 破解。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q92 -->
+    <div class="q" id="q92">
+      <div class="q-head" onclick="document.getElementById('b92').open=!document.getElementById('b92').open">
+        <span class="q-idx">92</span><span class="q-title">shared_ptr 是如何实现的？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>核心是<b>引用计数 + 控制块</b>：shared_ptr 存「对象指针 + 指向控制块的指针」，拷贝/赋值将计数 +1，析构将计数 -1，计数归 0 时释放对象并清理控制块。</div>
+        <details id="b92">
+          <summary>展开：引用计数机制</summary>
+          <ul>
+            <li><b>控制块（Control Block）</b>：存放 shared 引用计数、weak 引用计数、删除器 deleter、被管理对象指针。</li>
+            <li><b>构造</b>：接收裸指针，引用计数初始化为 1（空指针为 0）。</li>
+            <li><b>拷贝构造/赋值</b>：共享对象指针，引用计数 +1。</li>
+            <li><b>析构</b>：引用计数 -1，减到 0 则调 deleter 释放对象、清理控制块；大于 0 不释放。</li>
+          </ul>
+          <pre><code>std::shared_ptr&lt;int&gt; p1 = std::make_shared&lt;int&gt;(10);
+std::shared_ptr&lt;int&gt; p2 = p1;       // 引用计数 +1
+std::cout &lt;&lt; p1.use_count();       // 输出 2</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q93 -->
+    <div class="q" id="q93">
+      <div class="q-head" onclick="document.getElementById('b93').open=!document.getElementById('b93').open">
+        <span class="q-idx">93</span><span class="q-title">手写智能指针？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>手撕目标：实现「对象指针 + 堆上共享的引用计数」，拷贝时计数 +1、析构时 -1、归 0 释放；建议掌握到能脱手写出。</div>
+        <details id="b93">
+          <summary>展开：最小 shared_ptr 骨架</summary>
+          <pre><code>template&lt;typename T&gt;
+class SharedPtr {
+  T* ptr_;
+  int* ref_count_;
+public:
+  explicit SharedPtr(T* p = nullptr)
+      : ptr_(p), ref_count_(new int(1)) {}
+  SharedPtr(const SharedPtr&amp; other)
+      : ptr_(other.ptr_), ref_count_(other.ref_count_) {
+    ++(*ref_count_);
+  }
+  ~SharedPtr() {
+    if (--(*ref_count_) == 0) { delete ptr_; delete ref_count_; }
+  }
+  T&amp; operator*()  const { return *ptr_; }
+  T* operator-&gt;() const { return ptr_; }
+  int use_count() const { return *ref_count_; }
+};</code></pre>
+          <ul>
+            <li>要点：计数存堆上供多对象共享；拷贝浅拷贝指针、共享计数；析构仅归 0 才 delete。</li>
+            <li>进阶：加移动语义、线程安全计数、weak 弱计数等。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q94 -->
+    <div class="q" id="q94">
+      <div class="q-head" onclick="document.getElementById('b94').open=!document.getElementById('b94').open">
+        <span class="q-idx">94</span><span class="q-title">说说你了解的 auto_ptr 作用？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>auto_ptr 是 C++98 的失败尝试：靠析构自动释放内存解决泄漏，但用 <code>delete</code> 而非 <code>delete[]</code>、拷贝即转移所有权，缺陷太多，已被 unique_ptr/shared_ptr 取代（C++11 弃用）。</div>
+        <details id="b94">
+          <summary>展开：特性与缺陷</summary>
+          <ul>
+            <li><b>优点</b>：构造函数接管、析构自动 delete，异常时也能释放（RAII 雏形）。</li>
+            <li><b>explicit 构造</b>：裸指针不能隐式转 auto_ptr。</li>
+            <li><b>独占</b>：多对象不能管理同一指针，拷贝/赋值会<span style="color:#b91c1c">转移所有权</span>、原对象失效。</li>
+            <li><b>缺陷</b>：用 <code>delete</code> 而非 <code>delete[]</code>，不能管理数组（UB）；不兼容 STL 容器。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q95 -->
+    <div class="q" id="q95">
+      <div class="q-head" onclick="document.getElementById('b95').open=!document.getElementById('b95').open">
+        <span class="q-idx">95</span><span class="q-title">智能指针出现循环引用怎么解决？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>两个 shared_ptr 互指时引用计数永不为 0、内存泄漏；把其中一侧改成 <code>weak_ptr</code>（不增加计数）即可破环。</div>
+        <details id="b95">
+          <summary>展开：成因与解法</summary>
+          <div class="mermaid">
+flowchart TD
+    A["shared_ptr&lt;A&gt; a (use_count=1)"] --"a-&gt;pb_ = b"--> B["A 持有 B (B 计数 2)"]
+    B --"b-&gt;pa_ = a"--> C["B 持有 A (A 计数 2)"]
+    C --> D["作用域结束，a/b 销毁<br>各剩 1，永远不为 0"]
+    D --> E["A、B 均不析构 → 内存泄漏"]
+    F["解法：B 侧用 weak_ptr&lt;A&gt; pa_"] --> G["不增加 A 的引用计数"]
+    G --> H["a 销毁 → A 计数归 0 → 链式释放"]
+          </div>
+          <pre><code>class B;
+class A { public: std::shared_ptr&lt;B&gt; pb_; ~A(){ /*...*/ } };
+class B { public: std::shared_ptr&lt;A&gt; pa_; ~B(){ /*...*/ } }; // 循环泄漏
+// 改法：把 B 中 pa_ 换成 weak_ptr&lt;A&gt;，锁定时用 lock()
+class B { public: std::weak_ptr&lt;A&gt; pa_; ~B(){ /*...*/ } };</code></pre>
+          <ul>
+            <li>循环引用：A 和 B 互相持有 shared_ptr，各自 use_count 至少 1，作用域结束归不了 0。</li>
+            <li>weak_ptr 不参与生命周期管理，仅用于访问（<code>lock()</code> 判活再取）。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+    <!-- ============ 2.6 ============ -->
+    <h2 id="s26" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">2.6 模板编程</h2>
+    <!-- Q96 -->
+    <div class="q" id="q96">
+      <div class="q-head" onclick="document.getElementById('b96').open=!document.getElementById('b96').open">
+        <span class="q-idx">96</span><span class="q-title">介绍一下模板编程？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>模板是 C++ 泛型编程核心：写一份通用代码，编译时按实际类型「实例化」出具体函数/类，避免为每种类型重写。</div>
+        <details id="b96">
+          <summary>展开：机制与函数/类区别</summary>
+          <h3 class="detail">编译机制（两次编译）</h3>
+          <ul>
+            <li>第一次编译：对模板声明/定义处做语法检查。</li>
+            <li>第二次编译：实例化时按实际类型参数编译生成具体代码。</li>
+            <li>模板定义须与声明同放头文件，否则实例化失败 → 链接错误。</li>
+          </ul>
+          <h3 class="detail">函数模板 vs 类模板</h3>
+          <table>
+            <tr><th></th><th>函数模板</th><th>类模板</th></tr>
+            <tr><td>实例化</td><td>可隐式（推导）或显式（指定）</td><td>只能显式指定参数</td></tr>
+            <tr><td>语法</td><td>调用可省略模板参数</td><td>必须 <code>ClassName&lt;int&gt;</code></td></tr>
+            <tr><td>用途</td><td>处理多种类型的函数逻辑</td><td>通用数据结构/算法</td></tr>
+          </table>
+          <pre><code>template&lt;typename T&gt; T add(T a, T b) { return a + b; }
+add&lt;int&gt;(5, 3);   // 显式实例化 int
+add(2.5, 3.5);    // 隐式推导为 double</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q97 -->
+    <div class="q" id="q97">
+      <div class="q-head" onclick="document.getElementById('b97').open=!document.getElementById('b97').open">
+        <span class="q-idx">97</span><span class="q-title">函数模板内的参数什么阶段会被替换掉？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>在<b>编译阶段</b>被替换：编译器根据实参推导出模板参数类型，代入模板生成具体函数实例（模板实例化），无运行期开销。</div>
+        <details id="b97">
+          <summary>展开：实例化三步</summary>
+          <ol>
+            <li><b>模板解析</b>：检测模板调用，据实参推导模板参数类型。</li>
+            <li><b>类型替换</b>：把模板参数替换为推导出的实际类型。</li>
+            <li><b>生成实例</b>：用替换后类型生成具体函数实例。</li>
+          </ol>
+          <pre><code>template&lt;typename T&gt; T add(T a, T b) { return a + b; }
+add(1, 2);   // 编译期生成 int add(int,int)
+add(1.5,2.5);// 编译期生成 double add(double,double)
+add(5, 2.5); // 编译错误：无法推导 T 的统一类型</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q98 -->
+    <div class="q" id="q98">
+      <div class="q-head" onclick="document.getElementById('b98').open=!document.getElementById('b98').open">
+        <span class="q-idx">98</span><span class="q-title">模板用到的传参类型？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>四类：类型参数（typename/class）、非类型参数（整数/枚举/指针等常量值）、模板模板参数（传模板）、函数参数（函数指针/函数对象/Lambda）。</div>
+        <details id="b98">
+          <summary>展开：四种参数</summary>
+          <ul>
+            <li><b>类型参数</b>：<code>typename T</code> / <code>class T</code>，最常用。</li>
+            <li><b>非类型参数</b>：诸如整数、枚举、指针/引用等常量值，实例化时需给具体值。</li>
+            <li><b>模板模板参数</b>：模板接受另一个模板作参数，用于容器嵌套。</li>
+            <li><b>函数参数</b>：模板函数可接收函数指针、函数对象、<code>std::function</code>、Lambda。</li>
+          </ul>
+          <pre><code>template&lt;typename T, int Size&gt; class Array { T arr[Size]; };  // 非类型
+Array&lt;int, 5&gt; arr;
+
+template&lt;template&lt;typename,typename&gt; class C&gt; class Wrapper { // 模板模板
+  C&lt;int, std::allocator&lt;int&gt;&gt; data;
+};
+
+template&lt;typename F&gt; void apply(F f, int x) { f(x); }      // 函数参数
+apply([](int x){ return x + 10; }, 5);</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q99 -->
+    <div class="q" id="q99">
+      <div class="q-head" onclick="document.getElementById('b99').open=!document.getElementById('b99').open">
+        <span class="q-idx">99</span><span class="q-title">概括一下 C++ 的模板是怎么工作的？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>模板以 <code>template</code> 开头声明参数，调用时编译器按参数「编译期实例化」出各类型专用代码——不是万能代码，而是一份模板多份实例。</div>
+        <details id="b99">
+          <summary>展开：工作流程</summary>
+          <ol>
+            <li>以 <code>template</code> 关键字声明类型/非类型参数。</li>
+            <li>应用于类模板、函数模板。</li>
+            <li>被调用时，编译器据定义+实参生成具体代码实例（模板实例化）。</li>
+            <li>实例化发生在<b>编译期</b>而非运行期，每种使用到的类型各生成一份。</li>
+            <li>是 STL 容器等泛型结构与算法的基础。</li>
+          </ol>
+        </details>
+      </div>
+    </div>
+    <!-- ============ 2.7 ============ -->
+    <h2 id="s27" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">2.7 新特性</h2>
+    <!-- Q100 -->
+    <div class="q" id="q100">
+      <div class="q-head" onclick="document.getElementById('b100').open=!document.getElementById('b100').open">
+        <span class="q-idx">100</span><span class="q-title">概述 C++11 有哪些新特性？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>核心新特性：nullptr、auto/decltype 类型推导、范围 for、初始化列表、Lambda、右值引用+move、智能指针、多线程库、unordered 容器、constexpr。</div>
+        <details id="b100">
+          <summary>展开：十大新特性</summary>
+          <ul>
+            <li><b>nullptr</b>：替代 NULL，类型安全空指针。</li>
+            <li><b>类型推导</b>：<code>auto</code> 推变量类型、<code>decltype</code> 推表达式类型。</li>
+            <li><b>范围 for</b>：<code>for (auto&amp; i : container)</code> 简化遍历。</li>
+            <li><b>成员初始化列表</b>：类/结构体内直接初始化成员 <code>int x = 10;</code>。</li>
+            <li><b>Lambda</b>：匿名函数，简化回调。</li>
+            <li><b>右值引用 + move 语义</b>：<code>T&amp;&amp;</code> 移动而非拷贝。</li>
+            <li><b>智能指针</b>：<code>unique_ptr / shared_ptr / weak_ptr</code>。</li>
+            <li><b>线程支持</b>：<code>std::thread / std::mutex</code> 等。</li>
+            <li><b>unordered 容器</b>：哈希表实现，快速查找。</li>
+            <li><b>constexpr</b>：编译期求值。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q101 -->
+    <div class="q" id="q101">
+      <div class="q-head" onclick="document.getElementById('b101').open=!document.getElementById('b101').open">
+        <span class="q-idx">101</span><span class="q-title">递归和迭代的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>递归靠函数调用自身（有栈开销、需终止条件、胜在简洁）；迭代靠循环更新变量（内存固定、效率高、稍复杂）。</div>
+        <details id="b101">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>递归</th><th>迭代</th></tr>
+            <tr><td>实现方式</td><td>函数调用自身</td><td>循环结构</td></tr>
+            <tr><td>终止条件</td><td>明确的基本情况</td><td>循环条件</td></tr>
+            <tr><td>内存消耗</td><td>每次调用增栈深，消耗多</td><td>固定内存，占用少</td></tr>
+            <tr><td>执行效率</td><td>调用/返回耗时，较低</td><td>直接执行，较高</td></tr>
+            <tr><td>可读性</td><td>简洁直观</td><td>略复杂但高效</td></tr>
+            <tr><td>适用</td><td>树、图遍历等递归结构问题</td><td>状态变量更新问题</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q102 -->
+    <div class="q" id="q102">
+      <div class="q-head" onclick="document.getElementById('b102').open=!document.getElementById('b102').open">
+        <span class="q-idx">102</span><span class="q-title">返回值优化（RVO）？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>RVO 是编译器优化：函数返回局部对象时，直接在调用点内存构造对象，省掉临时对象的拷贝/移动。</div>
+        <details id="b102">
+          <summary>展开：核心与原理</summary>
+          <ul>
+            <li><b>核心思想</b>：调用点提前分配目标对象内存，函数内局部对象直接构造到该位置。</li>
+            <li><b>原理</b>：栈上预分配目标内存，省略「临时对象 + 拷贝」两步。</li>
+          </ul>
+          <pre><code>Test createTest() {
+  Test t;   // 若 RVO 生效，直接构造到调用点
+  return t;
+}
+int main() {
+  Test t1 = createTest(); // 未优化：构造→拷贝→析构；优化后：只构造一次
+}</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q103 -->
+    <div class="q" id="q103">
+      <div class="q-head" onclick="document.getElementById('b103').open=!document.getElementById('b103').open">
+        <span class="q-idx">103</span><span class="q-title">介绍一下类型转换？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>C++ 四种显式转换：<code>const_cast</code>（去 const）、<code>static_cast</code>（编译期静态转换）、<code>dynamic_cast</code>（多态运行时安全转换）、<code>reinterpret_cast</code>（低层不安全的位重解释）。</div>
+        <details id="b103">
+          <summary>展开：四种转换对比</summary>
+          <table>
+            <tr><th>转换</th><th>作用</th><th>使用场景</th><th>特点与限制</th></tr>
+            <tr><td>const_cast</td><td>去/加 const 限定</td><td>改 const 变量、兼容 C 库</td><td>只能指针/引用；改底层 const 对象值仍 UB</td></tr>
+            <tr><td>static_cast</td><td>编译时类型检查转换</td><td>基本类型、非 const→const、上下转型</td><td>无运行时检查，向下转型可能 UB</td></tr>
+            <tr><td>dynamic_cast</td><td>多态类运行时安全转换</td><td>含虚函数的上下转型</td><td>需虚函数；失败返回 nullptr / 抛 bad_cast</td></tr>
+            <tr><td>reinterpret_cast</td><td>低层、不安全位重解释</td><td>指针互转、指针↔整数</td><td>不检查，结果不可预测，慎用</td></tr>
+          </table>
+          <pre><code>Derived d;
+Base* b = static_cast&lt;Base*&gt;(&amp;d);              // 向上，安全
+Derived* dd = dynamic_cast&lt;Derived*&gt;(b);        // 向下，运行时检查
+const int* p = &amp;x;
+int* q = const_cast&lt;int*&gt;(p);                  // 去 const</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q104 -->
+    <div class="q" id="q104">
+      <div class="q-head" onclick="document.getElementById('b104').open=!document.getElementById('b104').open">
+        <span class="q-idx">104</span><span class="q-title">函数参数的传递方式有哪些？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>四种：按值（副本）、按引用（别名、零拷贝）、按指针（地址、可空）、右值引用传递（移动/完美转发）。</div>
+        <details id="b104">
+          <summary>展开：四种传递方式</summary>
+          <table>
+            <tr><th>方式</th><th>接收</th><th>是否影响原值</th><th>适用</th></tr>
+            <tr><td>按值</td><td>副本</td><td>否</td><td>简单类型；大对象拷贝代价高</td></tr>
+            <tr><td>按引用</td><td>引用</td><td>是</td><td>需改原值、避免拷贝</td></tr>
+            <tr><td>按指针</td><td>地址</td><td>是</td><td>可传空、需判空</td></tr>
+            <tr><td>右值引用</td><td>T&amp;&amp;</td><td>视用途</td><td>移动语义、完美转发</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q105 -->
+    <div class="q" id="q105">
+      <div class="q-head" onclick="document.getElementById('b105').open=!document.getElementById('b105').open">
+        <span class="q-idx">105</span><span class="q-title">lock_guard 的底层实现机制是怎样的？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>RAII：构造时加锁（<code>lock()</code>），析构时自动解锁（<code>unlock()</code>）；即使异常退出也会析构，保证锁不泄漏。</div>
+        <details id="b105">
+          <summary>展开：机制</summary>
+          <ul>
+            <li><b>构造加锁</b>：对象创建即调所管 mutex 的 <code>lock()</code>。</li>
+            <li><b>析构解锁</b>：离开作用域/异常退出时析构调 <code>unlock()</code>。</li>
+            <li><b>对比</b>：<code>unique_lock</code> 更灵活（可手动/延迟加解锁），lock_guard 更轻量、不可手动 unlock。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q106 -->
+    <div class="q" id="q106">
+      <div class="q-head" onclick="document.getElementById('b106').open=!document.getElementById('b106').open">
+        <span class="q-idx">106</span><span class="q-title">move 的底层实现原理？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>std::move</code> 本质是 <code>static_cast&lt;T&amp;&amp;&gt;</code>，只把左值转成右值引用、不搬数据；真正转移资源的是随后被触发的移动构造/移动赋值。</div>
+        <details id="b106">
+          <summary>展开：资源转移流程</summary>
+          <ol>
+            <li><b>调用 move</b>：左值 → 右值引用，触发移动语义。</li>
+            <li><b>触发移动构造/赋值</b>：右值引用作参时调用对应移动函数。</li>
+            <li><b>转移</b>：把原对象资源指针交给新对象，原对象指针置 <code>nullptr</code>，处于安全状态。</li>
+          </ol>
+          <pre><code>MyClass(MyClass&amp;&amp; other) noexcept : data(other.data) {
+  other.data = nullptr;   // 资源转移，原指针置空
+}</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q107 -->
+    <div class="q" id="q107">
+      <div class="q-head" onclick="document.getElementById('b107').open=!document.getElementById('b107').open">
+        <span class="q-idx">107</span><span class="q-title">forward 完美转发底层原理？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>完美转发 = 通用引用（<code>T&amp;&amp;</code>）+ 引用折叠 + <code>std::forward</code>（<code>static_cast&lt;T&amp;&amp;&gt;</code>），保持实参「值类别」原样传递。</div>
+        <details id="b107">
+          <summary>展开：引用折叠与转发</summary>
+          <div class="mermaid">
+flowchart TD
+    A["模板参数 T&& arg (通用引用)"] --> B{"传入左值还是右值?"}
+    B --"左值 int& x"--> C["T 推导为 int&<br>T&& → int& (引用折叠)"]
+    B --"右值 10"--> D["T 推导为 int<br>T&& → int&& (右值引用)"]
+    C --> E["forward&lt;T&gt; 返回左值引用"]
+    D --> F["forward&lt;T&gt; 返回右值引用"]
+          </div>
+          <ul>
+            <li><b>引用折叠规则</b>：<code>T&amp; &amp;</code>、<code>T&amp; &amp;&amp;</code>、<code>T&amp;&amp; &amp;</code> → <code>T&amp;</code>；仅 <code>T&amp;&amp; &amp;&amp;</code> → <code>T&amp;&amp;</code>。</li>
+            <li><b>通用引用</b>：<code>T&amp;&amp;</code> 可同时绑定左值/右值，是本机制基础。</li>
+            <li><b>底层实现</b>：<code>forward</code> 对 remove_reference 后类型做 <code>static_cast&lt;T&amp;&amp;&gt;</code>。</li>
+          </ul>
+          <pre><code>template&lt;typename T&gt;
+T&amp;&amp; forward(typename std::remove_reference&lt;T&gt;::type&amp; arg) noexcept {
+  return static_cast&lt;T&amp;&amp;&gt;(arg);
+}</code></pre>
+          <table>
+            <tr><th>传参类型</th><th>推导结果</th></tr>
+            <tr><td>左值 int&amp; x</td><td>T → int&amp;，T&amp;&amp; → int&amp;（折叠）</td></tr>
+            <tr><td>右值 10</td><td>T → int，T&amp;&amp; → int&amp;&amp;</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q108 -->
+    <div class="q" id="q108">
+      <div class="q-head" onclick="document.getElementById('b108').open=!document.getElementById('b108').open">
+        <span class="q-idx">108</span><span class="q-title">move 和 forward 的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>move 无条件把左值转右值引用（用于移动），forward 有条件按模板推导保持值类别（用于完美转发）。</div>
+        <details id="b108">
+          <summary>展开：对比</summary>
+          <table>
+            <tr><th>特性</th><th>move</th><th>forward</th></tr>
+            <tr><td>作用</td><td>左值转右值引用，资源移动</td><td>保持值类别，完美转发</td></tr>
+            <tr><td>使用场景</td><td>移动构造/赋值、容器优化</td><td>模板函数转发参数</td></tr>
+            <tr><td>适用范围</td><td>任何对象</td><td>仅模板函数中的万能引用 T&amp;&amp;</td></tr>
+            <tr><td>行为</td><td>转右值引用，不关心原类别</td><td>转发并保留原值类别</td></tr>
+            <tr><td>底层</td><td><code>static_cast&lt;T&amp;&amp;&gt;</code></td><td><code>static_cast&lt;T&amp;&amp;&gt;</code>（按推导值类别）</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q109 -->
+    <div class="q" id="q109">
+      <div class="q-head" onclick="document.getElementById('b109').open=!document.getElementById('b109').open">
+        <span class="q-idx">109</span><span class="q-title">你了解 lambda 表达式吗？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>lambda 是匿名函数，语法六要素：捕获列表 <code>[]</code>、参数 <code>()</code>、<code>mutable</code>、<code>noexcept/throw()</code>、返回类型 <code>-&gt;</code>、函数体 <code>{}</code>。</div>
+        <details id="b109">
+          <summary>展开：语法与捕获</summary>
+          <pre><code>[外部变量访问方式说明符] (参数) mutable noexcept/throw() -&gt; 返回值类型 { 函数体; };
+
+auto add = [](int a, int b) -&gt; int { return a + b; };</code></pre>
+          <ul>
+            <li><b>[]</b> 捕获列表不可省；<code>[=]</code> 值捕获、<code>[&amp;]</code> 引用捕获、<code>[this]</code> 捕获 this。</li>
+            <li><b>mutable</b>：允许修改值捕获的外部变量副本（默认 const）。</li>
+            <li><b>noexcept/throw()</b>：标注是否抛异常。</li>
+            <li><b>-&gt; 返回类型</b>：仅一个 return 或返回 void 时可省略。</li>
+            <li>函数体可用参数、捕获的外部变量、全局变量。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q110 -->
+    <div class="q" id="q110">
+      <div class="q-head" onclick="document.getElementById('b110').open=!document.getElementById('b110').open">
+        <span class="q-idx">110</span><span class="q-title">了解函数指针吗？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>函数指针存储函数入口地址，形式 <code>返回类型 (*名)(参数列表)</code>，主要用于回调机制；现代 C++ 可用 <code>std::function</code> 替代。</div>
+        <details id="b110">
+          <summary>展开：定义与回调</summary>
+          <pre><code>int add(int a, int b) { return a + b; }
+int (*func_ptr)(int, int) = add;
+func_ptr(10, 20);   // 输出 30
+
+// 回调：函数指针作参数
+void execute(void (*cb)()) { cb(); }
+execute(callback1);
+execute([]{ /* lambda 也可作回调 */ });</code></pre>
+          <ul>
+            <li>每个函数有固定入口地址，函数指针保存该地址。</li>
+            <li>用于回调、动态决定调用哪个函数。</li>
+            <li><code>std::function</code> 可统一存储普通函数/Lambda/函数对象。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q111 -->
+    <div class="q" id="q111">
+      <div class="q-head" onclick="document.getElementById('b111').open=!document.getElementById('b111').open">
+        <span class="q-idx">111</span><span class="q-title">constexpr 介绍一下，与 const 区别是啥？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>constexpr</code> 保证<b>编译期求值</b>（变量/函数/构造都可用于编译期常量）；<code>const</code> 只保证「运行期不可修改」，不强制编译期。</div>
+        <details id="b111">
+          <summary>展开：constexpr 与 const 对比</summary>
+          <ul>
+            <li><b>constexpr 变量</b>：声明时必须初始化，且初值必须是编译期常量表达式。</li>
+            <li><b>constexpr 函数</b>：C++11 函数体只能一条 return；C++14 起支持循环、局部变量、多 return。</li>
+            <li><b>constexpr 构造/成员函数</b>：编译期创建对象、调用成员。</li>
+          </ul>
+          <table>
+            <tr><th>特性</th><th>const</th><th>constexpr</th></tr>
+            <tr><td>编译期计算</td><td>不强制，可为运行期值</td><td>必须在编译期计算</td></tr>
+            <tr><td>函数支持</td><td>不支持常量函数</td><td>支持编译期常量函数</td></tr>
+            <tr><td>变量初始化</td><td>允许任意值</td><td>必须编译期常量表达式</td></tr>
+            <tr><td>场景</td><td>声明运行期不可改的变量</td><td>编译期常量、高性能代码</td></tr>
+          </table>
+          <pre><code>constexpr int square(int x) { return x * x; }
+constexpr int area = square(4);   // 编译期算出 16
+constexpr int size = 10;
+int arr[size];                    // 可作数组大小</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q112 -->
+    <div class="q" id="q112">
+      <div class="q-head" onclick="document.getElementById('b112').open=!document.getElementById('b112').open">
+        <span class="q-idx">112</span><span class="q-title">使用 constexpr 的有啥好处？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>三大好处：性能优化（编译期算好、省运行开销）、类型安全（比宏 #define 有类型检查）、代码清晰好维护。</div>
+        <details id="b112">
+          <summary>展开：三点好处</summary>
+          <ul>
+            <li><b>性能</b>：表达式/函数结果编译时算出，减少运行负担。</li>
+            <li><b>类型安全</b>：对比宏 <code>#define PI 3.14159</code> 无类型检查，constexpr 有类型检查。</li>
+            <li><b>可读性</b>：明确标注哪些是编译期计算，便于维护。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q113 -->
+    <div class="q" id="q113">
+      <div class="q-head" onclick="document.getElementById('b113').open=!document.getElementById('b113').open">
+        <span class="q-idx">113</span><span class="q-title">为什么 C++ 中虚拟成员函数模板不被允许？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>虚表要求所有虚函数<b>编译期签名确定</b>，而模板是<b>调用时才按需实例化</b>（类型组合无限）——静态虚表与动态实例化的根本冲突，故不允许。</div>
+        <details id="b113">
+          <summary>展开：冲突点</summary>
+          <ul>
+            <li><b>虚函数机制</b>：靠虚表(vtable)做动态绑定，虚表在编译期构建，必须含全部签名。</li>
+            <li><b>模板机制</b>：调用时才实例化（Instantiation-on-Demand），类型组合潜在无限。</li>
+            <li><b>冲突</b>：编译器无法预知模板会实例化出哪些函数，无法在虚表预留槽位。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+    <!-- ============ 2.8 ============ -->
+    <h2 id="s28" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">2.8 其他</h2>
+    <!-- Q114 -->
+    <div class="q" id="q114">
+      <div class="q-head" onclick="document.getElementById('b114').open=!document.getElementById('b114').open">
+        <span class="q-idx">114</span><span class="q-title">C++ 函数调用的压栈过程？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>每次调用分配一个栈帧存「返回地址 + 参数 + 局部变量 + 运行状态」；参数从右到左压栈，返回时弹出栈帧恢复调用者。</div>
+        <details id="b114">
+          <summary>展开：压栈步骤（栈底→栈顶）</summary>
+          <div class="mermaid">
+flowchart TD
+    A["main() 运行: 分配栈帧<br>返回地址 + 局部 var1/var2"] --> B["调用 func(var1,var2):<br>main 运行状态压栈 + func 返回地址<br>从右到左压参 (先 var2 再 var1)"]
+    B --> C["func() 局部变量分配<br>调用 f(a):<br>func 运行状态 + f 返回地址 + 参 a"]
+    C --> D["f() 局部变量 y 分配<br>执行完弹出 f 栈帧, 回 func"]
+    D --> E["调用 f(b): 重复压/弹 f"]
+    E --> F["弹出 func 栈帧, 回 main<br>main 继续执行至退出"]
+          </div>
+          <ul>
+            <li><b>栈帧</b>：存返回地址、参数、局部变量、运行状态。</li>
+            <li><b>参数压栈顺序</b>：从右到左；基本类型传副本，数组/指针传地址。</li>
+            <li><b>返回</b>：栈帧弹出、恢复调用者，返回值经寄存器或栈传回。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q115 -->
+    <div class="q" id="q115">
+      <div class="q-head" onclick="document.getElementById('b115').open=!document.getElementById('b115').open">
+        <span class="q-idx">115</span><span class="q-title">写代码时有一类错误是 coredump，怎么调试？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>coredump 是程序异常终止时 OS 生成的 core 文件（含内存/寄存器/栈信息），用 gdb 的 <code>bt</code> 定位崩溃栈、<code>print</code> 查变量定位空指针/越界等原因。</div>
+        <details id="b115">
+          <summary>展开：成因与 gdb 定位流程</summary>
+          <h3 class="detail">常见成因</h3>
+          <ul>
+            <li>空指针解引用、数组越界、栈溢出（递归过深）、访问已释放内存、除零等。</li>
+          </ul>
+          <h3 class="detail">gdb 调试步骤</h3>
+          <pre><code>gdb ./coredump_test core        # 加载程序与 core 文件
+(gdb) bt                         # backtrace 查看崩溃调用栈
+(gdb) print p                    # 打印变量值 (如 p = 0x0 空指针)
+(gdb) frame 0                    # 切换帧，结合源码分析修复</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q116 -->
+    <div class="q" id="q116">
+      <div class="q-head" onclick="document.getElementById('b116').open=!document.getElementById('b116').open">
+        <span class="q-idx">116</span><span class="q-title">C++ 中将临时变量作为返回值时的处理过程？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>临时变量（栈局部变量）出函数即销毁，但返回值安全：小值存寄存器、复杂对象靠 RVO 原地构造或移动语义转移，避免拷贝与悬垂。</div>
+        <details id="b116">
+          <summary>展开：三种机制</summary>
+          <ul>
+            <li><b>寄存器返回</b>：小类型（int/double）存寄存器（如 EAX），不受栈销毁影响。</li>
+            <li><b>RVO</b>：复杂对象直接构造到调用者内存，免临时+拷贝。</li>
+            <li><b>移动语义</b>：返回右值时调移动构造，避免深拷贝。</li>
+            <li><b>危险</b>：返回局部变量的指针/引用是未定义行为（悬垂）。返回静态变量引用则安全。</li>
+          </ul>
+          <pre><code>int returnInt() { int temp = 42; return temp; }          // 存寄存器
+std::vector&lt;int&gt; createVector() { return {1,2,3,4}; }     // RVO/移动
+int&amp; returnRef() { int x = 0; return x; }                 // 危险：悬垂引用</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q117 -->
+    <div class="q" id="q117">
+      <div class="q-head" onclick="document.getElementById('b117').open=!document.getElementById('b117').open">
+        <span class="q-idx">117</span><span class="q-title">指针加减计算要注意什么？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>指针加减的单位是「所指向类型大小」：<code>ptr+n</code> 实际偏移 <code>n × sizeof(T)</code>；指针相减得元素个数（地址差 ÷ sizeof）。</div>
+        <details id="b117">
+          <summary>展开：规则与示例</summary>
+          <pre><code>int arr[] = {10,20,30,40,50};
+int* p1 = &amp;arr[1];   // 指向 20
+int* p2 = &amp;arr[4];   // 指向 50
+*(p1 + 2);           // 40（向后 2 个 int）
+*(p2 - 3);           // 20（向前 3 个 int）
+(p2 - p1);           // 3（元素个数 = 字节差 / sizeof(int)）</code></pre>
+          <ul>
+            <li><b>指针加法</b>：<code>ptr+n</code> 向后移动 n 个数据类型大小。</li>
+            <li><b>指针减法</b>：<code>ptr-n</code> 向前移动。</li>
+            <li><b>指针间减法</b>：同数组内两指针差 = 元素个数。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q118 -->
+    <div class="q" id="q118">
+      <div class="q-head" onclick="document.getElementById('b118').open=!document.getElementById('b118').open">
+        <span class="q-idx">118</span><span class="q-title">怎样判断两个浮点数是否相等？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>浮点数是二进制近似，不能用 <code>==</code> 直接比；应设容差 epsilon，用 <code>fabs(a-b) &lt; epsilon</code> 判断「近似相等」。</div>
+        <details id="b118">
+          <summary>展开：容差法</summary>
+          <pre><code>#include &lt;cmath&gt;
+bool almostEqual(double a, double b, double eps = 1e-9) {
+  return std::fabs(a - b) &lt; eps;
+}
+double x = 0.1 + 0.2, y = 0.3;   // x ≈ 0.30000000000000004
+almostEqual(x, y);                // true</code></pre>
+          <ul>
+            <li>浮点存储为二进制近似，必然带来精度误差，<code>==</code> 易误判。</li>
+            <li>机考/工程常用：取绝对值差小于一个极小容差即视为相等。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad:true, theme:'default', securityLevel:'loose',
+    flowchart:{ curve:'basis' }, themeVariables:{ fontFamily:'"Segoe UI","Microsoft YaHei",sans-serif' } });
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "categories": [{ "id": "languages", "name": "语言学习" }],
+  "subjects": [{
+    "id": "english-grammar",
+    "name": "英语语法",
+    "categoryId": "languages",
+    "questions": [{
+      "id": "present-perfect",
+      "question": "现在完成时与一般过去时有什么区别？",
+      "gist": "现在完成时强调过去事件与现在的联系，一般过去时描述明确过去时间发生的事件。",
+      "answer": "现在完成时由 have/has + 过去分词构成，强调到现在为止的经历、结果或持续状态。一般过去时描述已结束的过去事件，常与 yesterday、last week 等明确过去时间搭配。"
+    }]
+  }]
+}

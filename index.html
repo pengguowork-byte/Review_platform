@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识复习工作台</title>
+
+<link rel="stylesheet" href="assets/css/app.css">
+<link rel="stylesheet" href="assets/css/library.css">
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <h2>知识复习工作台</h2>
+    <div class="note">多领域知识 · 分类学习<br>一句话结论 → 展开详情<br><span style="color:#dc2626">★</span> 越多越重要</div>
+    <div class="review-box">
+      <div class="rb-title">当前知识范围 · 分级复习</div>
+      <div class="rb-stats">
+        <div class="rb-stat lv-unseen"><b id="st-unseen">0</b><span class="k">未记忆</span></div>
+        <div class="rb-stat lv-forgotten"><b id="st-forgotten">0</b><span class="k">忘记了</span></div>
+        <div class="rb-stat lv-fuzzy"><b id="st-fuzzy">0</b><span class="k">模糊</span></div>
+        <div class="rb-stat lv-skilled"><b id="st-skilled">0</b><span class="k">熟练</span></div>
+        <div class="rb-stat lv-mastered"><b id="st-mastered">0</b><span class="k">完全掌握</span></div>
+      </div>
+      <div class="rb-due" id="rbDue">待复习 0 题</div>
+      <div class="rb-bar"><i id="rbBar"></i></div>
+      <div id="quizMeta" style="font-size:10.5px;color:#94a3b8;margin-bottom:8px;line-height:1.5;"></div>
+      <button class="basket-btn" id="basketBtn">另一个篮子 (0)</button>
+    </div>
+
+  </aside>
+  <main>
+    <div class="topbar">
+      <h1>知识复习工作台</h1>
+      <div class="module-bar"><div id="categoryTabs" class="category-tabs" aria-label="最近使用的知识模块"></div><button class="module-manage" id="manageModulesBtn">全部模块 / 管理</button></div>
+      <div class="library-tools"><label>知识专题 <select id="subjectSelect"><option value="">全部专题</option></select></label><button class="btn" id="addKnowledgeBtn">添加知识</button></div>
+      <div class="toolbar">
+        <div class="search-box">
+          <svg class="svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+          <input type="text" id="qa-search" placeholder="搜索当前知识类型中的题目 / 关键词…" autocomplete="off" />
+        </div>
+        <button class="btn" id="qa-toggle">全部展开</button>
+        <button class="btn" id="reviewModeBtn">复习模式</button>
+        <span style="width:1px;height:20px;background:var(--border);margin:0 2px;"></span>
+        <button class="sync-btn" id="exportBtn" title="把本机复习进度导出为 JSON 文件，可发到手机再导入">导出进度</button>
+        <button class="sync-btn" id="importBtn" title="从其他设备导出的 JSON 合并复习进度">导入进度</button>
+        <span class="search-count" id="qa-count"></span>
+      </div>
+      <p id="librarySummary"></p>
+      <p class="warn">提示：流程图依赖 mermaid.js（需联网加载）；离线时流程图显示源码。左侧目录可点击跳转。</p>
+      <p style="font-size:12.5px;color:#0f172a;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:9px 12px;line-height:1.7;">
+        <b>AI 分级复习：</b>在卡片右上角点「AI 自测」或「深测」，DeepSeek 会按<b>要点覆盖率</b>判级 ——
+        <span style="color:#dc2626;font-weight:700">&lt;30 忘记了</span> ·
+        <span style="color:#d97706;font-weight:700">30–60 模糊</span> ·
+        <span style="color:#059669;font-weight:700">60–85 熟练</span> ·
+        <span style="color:#2563eb;font-weight:700">≥85 完全掌握</span>。
+        「忘记了」会触发<b>当天强制重学</b>（先看答案再复述）；连续 <b>2 次</b>达到熟练才毕业。判分需先运行 <code style="background:#fff;padding:1px 5px;border-radius:4px">启动.cmd</code>。
+      </p>
+    </div>
+    <div class="review-banner" id="reviewBanner"></div>
+    <div class="review-empty" id="reviewEmpty">今日没有待复习的题目<br>判分入口：卡片右上角「AI 自测」（默写复述判分）/「深测」（AI 出题）<br>未连续 2 次达到熟练的题会留在篮子里，到期自动出现在这里</div>
+
+  </main>
+</div>
+
+<dialog class="knowledge-dialog" id="addKnowledgeDialog" aria-labelledby="addKnowledgeTitle">
+  <div class="knowledge-dialog-head"><h2 id="addKnowledgeTitle">添加知识</h2><button class="dialog-close" id="addKnowledgeClose" aria-label="关闭添加知识">×</button></div>
+  <div class="add-tabs" role="tablist" aria-label="添加方式">
+    <button role="tab" id="addFileTab" data-add-mode="file" aria-controls="addFilePanel" aria-selected="true">题库文件</button>
+    <button role="tab" id="addPasteTab" data-add-mode="paste" aria-controls="addPastePanel" aria-selected="false">粘贴题库</button>
+    <button role="tab" id="addDocumentTab" data-add-mode="document" aria-controls="addDocumentPanel" aria-selected="false">资料提取</button>
+  </div>
+  <div id="addFilePanel" role="tabpanel" aria-labelledby="addFileTab" data-add-panel="file"><p>已有 JSON 题库？直接导入即可开始复习。</p><button class="btn" id="libraryImportBtn">选择题库文件</button><input id="libraryFile" type="file" accept=".json,application/json" hidden></div>
+  <div id="addPastePanel" role="tabpanel" aria-labelledby="addPasteTab" data-add-panel="paste" hidden><label for="libraryPasteText">粘贴 JSON 题库内容</label><textarea id="libraryPasteText" placeholder="粘贴 JSON 题库内容"></textarea><button class="btn" id="libraryPasteConfirm">确认添加</button></div>
+  <div id="addDocumentPanel" role="tabpanel" aria-labelledby="addDocumentTab" data-add-panel="document" hidden><p>从 PDF、Word 或图片提取知识，再生成题目。确认题目后可导出为复习题库。</p><button class="btn" id="extractBtn">打开资料提取</button></div>
+  <div class="add-category"><label for="addKnowledgeCategory">题库所属模块</label><select id="addKnowledgeCategory"></select><p class="dialog-hint">同 ID 专题会更新，已有复习进度保留。</p></div>
+  <p id="libraryStatus" role="status" aria-live="polite"></p>
+</dialog>
+<dialog class="knowledge-dialog" id="modulesDialog" aria-labelledby="modulesTitle">
+  <div class="knowledge-dialog-head"><h2 id="modulesTitle">知识模块</h2><button class="dialog-close" id="modulesClose" aria-label="关闭知识模块">×</button></div>
+  <p class="dialog-hint">选择模块进入学习。主页仅显示最近使用的五个模块。</p>
+  <div id="moduleList" class="module-list"></div>
+  <form id="moduleNameForm" class="module-name-form" hidden><label for="moduleNameInput" id="moduleNameLabel">模块名称</label><input id="moduleNameInput" maxlength="60" required><button class="btn" type="submit">保存名称</button><button class="btn-ghost" id="moduleNameCancel" type="button">取消</button></form>
+  <button class="btn" id="moduleCreateBtn">新建知识模块</button><p id="moduleStatus" role="status" aria-live="polite"></p>
+</dialog>
+
+
+<div class="basket-mask" id="basketMask"></div>
+<div class="basket" id="basket">
+  <div class="basket-hd">
+    <h2>另一个篮子 · 专项复习</h2>
+    <button class="basket-close" id="basketClose" aria-label="关闭">&times;</button>
+  </div>
+  <div class="basket-hint" id="basketHint">存放所有「未毕业」的题，按到期时间排序。</div>
+  <div class="basket-list" id="basketList"></div>
+</div>
+
+
+<div class="mask" id="syncMask">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="导入复习进度">
+    <div class="modal-hd"><b>导入复习进度</b><button class="modal-x" id="syncClose" type="button" aria-label="关闭">✕</button></div>
+    <div class="modal-bd">
+      <div class="quiz-tabs" style="margin-bottom:12px;">
+        <button class="quiz-tab active" id="tabFile" type="button">选择文件</button>
+        <button class="quiz-tab" id="tabPaste" type="button">粘贴内容</button>
+      </div>
+
+      <div id="paneFile">
+        <div class="dropzone" id="dropzone">
+          点击选择，或把 JSON 文件拖到这里<br>
+          <span style="font-size:11.5px;">建议用从另一台设备「导出进度」得到的文件</span>
+        </div>
+        <input type="file" id="syncFile" accept=".json,application/json,text/plain" style="display:none" />
+      </div>
+
+      <div id="panePaste" style="display:none;">
+        <div class="quiz-q">把另一台设备导出的 JSON 原文粘贴到下面：</div>
+        <textarea id="syncText" placeholder='{"app":"eb-review","version":2,"cards":{ ... }}'></textarea>
+        <button class="quiz-go" id="syncParse" type="button" style="margin-top:8px;background:var(--accent);padding:8px 16px;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">解析</button>
+      </div>
+
+      <div id="syncResult"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn-ghost" id="syncCancel" type="button">取消</button>
+      <button class="btn-main" id="syncConfirm" type="button" disabled>确认导入</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="syncToast"></div>
+
+
+<div class="mask" id="exMask">
+  <div class="modal ex-modal" role="dialog" aria-modal="true" aria-label="文件导入与内容提取">
+    <div class="modal-hd"><b>导入提取 · 知识点 / 题库工作台</b><button class="modal-x" id="exClose" type="button" aria-label="关闭">✕</button></div>
+    <div class="modal-bd">
+      <div class="quiz-tabs" style="margin-bottom:12px;">
+        <button class="quiz-tab active" id="exTabImport" type="button">1 · 导入文件</button>
+        <button class="quiz-tab" id="exTabProgress" type="button">2 · 提取进度</button>
+        <button class="quiz-tab" id="exTabResult" type="button">3 · 知识点 / 题库</button>
+      </div>
+
+      <div id="exPaneImport">
+        <div class="library-tools"><label for="exCategory">资料所属知识类型</label><select id="exCategory"></select></div>
+        <div class="ex-drop" id="exDrop">
+          点击选择文件，或把文件拖到这里<br>
+          <span class="ex-drop-hint">PDF / DOCX / JPG / PNG / GIF · 单个文件 ≤ 50MB · 文件在本地解析，生成知识点和题库时会将提取文本发送给 AI</span>
+        </div>
+        <input type="file" id="exFile" multiple accept=".pdf,.docx,.jpg,.jpeg,.png,.gif" style="display:none" />
+        <div class="ex-rules">
+          <span>格式白名单：.pdf / .docx / .jpg / .jpeg / .png / .gif</span>
+          <span>大小上限：50MB / 个</span>
+          <span>提取并发：2 个</span>
+          <span>OCR 上限：30 页 / 个</span>
+          <span>.doc（旧版）请先另存为 .docx</span>
+        </div>
+        <table class="ex-queue">
+          <thead><tr><th>文件</th><th>大小</th><th>状态</th><th>进度</th><th>信息</th><th></th></tr></thead>
+          <tbody id="exQueueBody"></tbody>
+        </table>
+        <div class="ex-empty" id="exQueueEmpty">还没有文件<br>拖入或点击上方区域开始导入</div>
+      </div>
+
+      <div id="exPaneProgress" style="display:none;">
+        <div class="ex-stage" id="exStage">
+          <span>队列 <b id="exStTotal">0</b></span>
+          <span>已完成 <b id="exStDone">0</b></span>
+          <span>提取文本 <b id="exStChars">0</b> 字符</span>
+          <span>OCR 页数 <b id="exStOcr">0</b></span>
+          <span>文本分块 <b id="exStBlocks">0</b></span>
+        </div>
+        <div class="ex-bar" id="exTotalBar"><i id="exTotalBarI"></i></div>
+        <div class="ex-log" id="exLog"></div>
+      </div>
+
+      <div id="exPaneResult" style="display:none;">
+        <div class="ex-res-hd">
+          <button class="ex-chip" id="exSubKp" type="button">知识点 <span id="exKpCount">0</span></button>
+          <button class="ex-chip" id="exSubQ" type="button">题库 <span id="exQCount">0</span></button>
+          <span class="sp"></span>
+          <button class="ex-chip pri" id="exGenKp" type="button">提炼知识点</button>
+          <button class="ex-chip" id="exGenQ" type="button">生成题库</button>
+          <button class="ex-chip" id="exConfirmAll" type="button">全部确认</button>
+          <button class="ex-chip" id="exExportJson" type="button">导出 JSON</button>
+          <button class="ex-chip" id="exExportCsv" type="button">导出 CSV</button>
+          <button class="ex-chip" id="exExportXlsx" type="button">导出 Excel</button>
+          <button class="ex-chip" id="exExportLibrary" type="button">导出复习题库</button>
+        </div>
+        <div class="ex-rules" id="exFileFilter"></div>
+        <div id="exResultList"></div>
+        <div class="ex-empty" id="exResultEmpty">还没有提取结果<br>先在「导入文件」放入 PDF / Word / 图片并完成提取，再点「提炼知识点」或「生成题库」</div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn-ghost" id="exClear" type="button">清空工作台</button>
+      <button class="btn-main" id="exStart" type="button">开始提取</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script src="assets/data/library.js"></script>
+<script src="assets/js/library-preferences.js"></script>
+<script src="assets/js/review-engine.js"></script>
+<script src="assets/js/library.js"></script>
+<script src="assets/js/search.js"></script>
+<script src="assets/js/navigation.js"></script>
+<script src="assets/js/sync.js"></script>
+<script src="assets/js/review-ui.js"></script>
+<script src="assets/js/extract-storage.js"></script>
+<script src="assets/js/extract-parsers.js"></script>
+<script src="assets/js/extract-exports.js"></script>
+<script src="assets/js/extraction.js"></script>
+<script src="assets/js/knowledge-dialog.js"></script>
+<script src="assets/js/diagrams.js"></script>
+<script src="assets/js/bootstrap.js"></script>
+</body>
+</html>

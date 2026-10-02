@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>操作系统 · 嵌入式校招八股（精简重构版）</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#ffffff; --border:#e3e8ef; --text:#1f2937; --muted:#6b7280;
+    --accent:#2563eb; --accent-soft:#eef4ff; --h1:#0f172a;
+    --star5:#dc2626; --star4:#ea580c; --star3:#ca8a04; --star2:#16a34a; --star1:#64748b;
+    --codebg:#0f172a; --codetext:#e2e8f0;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;}
+  a{color:var(--accent);text-decoration:none;}
+
+  /* 布局 */
+  .layout{display:flex;}
+  aside{
+    width:300px;min-width:300px;height:100vh;position:sticky;top:0;overflow-y:auto;
+    background:#0f172a;color:#cbd5e1;padding:20px 14px;font-size:13px;
+  }
+  aside h2{color:#fff;font-size:15px;margin:0 0 12px;letter-spacing:1px;}
+  aside .note{font-size:11px;color:#64748b;margin-bottom:16px;line-height:1.5;}
+  aside .sec{margin:10px 0 4px;font-weight:700;color:#93c5fd;font-size:13px;cursor:pointer;}
+  aside .sec:hover{color:#bfdbfe;}
+  aside ul{list-style:none;margin:0;padding:0 0 0 8px;border-left:1px solid #1e293b;}
+  aside li a{display:block;padding:4px 8px;color:#94a3b8;border-radius:4px;transition:.15s;}
+  aside li a:hover{color:#fff;background:#1e293b;}
+  aside li a .st{opacity:.7;font-size:11px;}
+
+  main{flex:1;padding:28px 36px;max-width:960px;}
+  .topbar{margin-bottom:20px;}
+  .topbar h1{font-size:22px;color:var(--h1);margin:0 0 6px;}
+  .topbar p{color:var(--muted);font-size:13px;margin:0;}
+
+  /* 卡片 */
+  .q{background:var(--card);border:1px solid var(--border);border-radius:10px;margin:14px 0;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+  .q-head{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:#fbfcfe;}
+  .q-head:hover{background:#f6f8fb;}
+  .q-idx{color:var(--muted);font-size:12px;font-weight:600;min-width:22px;}
+  .q-title{font-weight:600;flex:1;font-size:15px;}
+  .stars{font-size:13px;white-space:nowrap;letter-spacing:1px;}
+  .stars.st5{color:var(--star5);} .stars.st4{color:var(--star4);} .stars.st3{color:var(--star3);}
+  .stars.st2{color:var(--star2);} .stars.st1{color:var(--star1);}
+
+  .q-body{padding:4px 16px 16px;border-top:1px solid var(--border);}
+  /* 一句话结论 */
+  .gist{margin:12px 0 4px;padding:10px 14px;background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:6px;font-weight:600;color:#1e3a8a;}
+  .gist .lbl{display:inline-block;font-size:11px;color:var(--accent);font-weight:700;margin-right:6px;letter-spacing:1px;}
+
+  details{border-top:1px dashed var(--border);margin-top:8px;padding-top:8px;}
+  summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600;user-select:none;outline:none;}
+  summary:hover{color:var(--accent);}
+  details[open] summary{margin-bottom:8px;}
+
+  h3.detail{font-size:13px;color:var(--h1);margin:14px 0 6px;border-left:3px solid var(--accent);padding-left:8px;}
+  ul,ol{margin:6px 0;padding-left:22px;}
+  li{margin:3px 0;}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px;}
+  th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top;}
+  th{background:#f1f5f9;font-weight:600;}
+  tr:nth-child(even) td{background:#fafbfc;}
+  code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-family:"JetBrains Mono",Consolas,monospace;font-size:12.5px;color:#b91c1c;}
+  pre{background:var(--codebg);color:var(--codetext);padding:14px 16px;border-radius:8px;overflow-x:auto;font-size:12.5px;line-height:1.6;}
+  pre code{background:none;color:inherit;padding:0;}
+  .tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;background:#f1f5f9;color:var(--muted);margin:2px 3px 2px 0;}
+  .tag.hot{background:#fee2e2;color:#b91c1c;}
+  .mermaid{background:#fff;padding:10px;border-radius:8px;border:1px solid var(--border);margin:10px 0;text-align:center;}
+  .warn{font-size:11px;color:var(--muted);margin:0 0 4px;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <h2>操作系统 · 八股</h2>
+    <div class="note">精简重构版 · 分层式<br>一句话结论 → 展开详情<br><span style="color:#dc2626">★</span> 越多越重要</div>
+
+    <div class="sec" data-sec="s31">3.1 概述</div>
+    <ul id="s31-list">
+      <li><a href="#q1">1. 计算机是怎么启动的 <span class="st">★★★</span></a></li>
+      <li><a href="#q2">2. 实模式与保护模式 <span class="st">★★</span></a></li>
+      <li><a href="#q3">3. 异常和中断的区别 <span class="st">★★★★</span></a></li>
+      <li><a href="#q4">4. 冯诺依曼结构 <span class="st">★★★★</span></a></li>
+      <li><a href="#q5">5. C/C++ 程序内存分布 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q6">6. 栈空间大小 <span class="st">★★★★</span></a></li>
+      <li><a href="#q7">7. GCC 编译过程 <span class="st">★★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s32">3.2 内存管理</div>
+    <ul id="s32-list">
+      <li><a href="#q8">8. Win/Linux 内存分布 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q9">9. Linux 内存管理实现 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q10">10. 常见内存分配方式 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q11">11. 动态分区分配算法 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q12">12. 虚拟技术 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q13">13. 虚拟内存介绍 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q14">14. 虚拟内存的目的 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q15">15. 内存管理与分页 <span class="st">★★★★</span></a></li>
+      <li><a href="#q16">16. 虚拟地址转物理地址 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q17">17. 页表实现机制 <span class="st">★★★</span></a></li>
+      <li><a href="#q18">18. 分页的缺点 <span class="st">★★★</span></a></li>
+      <li><a href="#q19">19. 分页是否产生碎片 <span class="st">★★★</span></a></li>
+      <li><a href="#q20">20. 进程间共享内存分配 <span class="st">★★★</span></a></li>
+      <li><a href="#q21">21. 堆和栈分配效率 <span class="st">★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s33">3.3 进线程相关</div>
+    <ul id="s33-list">
+      <li><a href="#q22">22. 进程/线程/协程区别 <span class="st">★★★★</span></a></li>
+      <li><a href="#q23">23. 何时启用调度器 <span class="st">★★★</span></a></li>
+      <li><a href="#q24">24. 进程 A 改变量 B 可见吗 <span class="st">★★★★</span></a></li>
+      <li><a href="#q25">25. 对操作系统的理解 <span class="st">★★★★</span></a></li>
+      <li><a href="#q26">26. Linux 进程间通信概述 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q27">27. 进线程通信方法总结 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q28">28. 概述进程调度 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q29">29. Linux 任务调度 <span class="st">★★★</span></a></li>
+      <li><a href="#q30">30. 进程调度算法详解 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q31">31. 抢占式调度实现 <span class="st">★★★</span></a></li>
+      <li><a href="#q32">32. 进程间通信相关函数 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q33">33. 为何分用户/内核空间 <span class="st">★★★</span></a></li>
+      <li><a href="#q34">34. IO 多路复用 <span class="st">★★★</span></a></li>
+      <li><a href="#q35">35. 进程状态切换 <span class="st">★★★★</span></a></li>
+      <li><a href="#q36">36. 多线程执行顺序 <span class="st">★★★</span></a></li>
+      <li><a href="#q37">37. 进程结束静态区处理 <span class="st">★★★</span></a></li>
+      <li><a href="#q38">38. 单核线程调度顺序 <span class="st">★★★★</span></a></li>
+      <li><a href="#q39">39. 优先级反转及解决 <span class="st">★★★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s34">3.4 中断相关</div>
+    <ul id="s34-list">
+      <li><a href="#q40">40. Linux 中断流程 <span class="st">★★★</span></a></li>
+      <li><a href="#q41">41. 保护现场保护什么 <span class="st">★★★</span></a></li>
+      <li><a href="#q42">42. 外中断和异常区别 <span class="st">★★★★</span></a></li>
+      <li><a href="#q43">43. 中断和轮询 <span class="st">★★★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s35">3.5 内核相关</div>
+    <ul id="s35-list">
+      <li><a href="#q44">44. Linux 设备树 <span class="st">★★★★</span></a></li>
+      <li><a href="#q45">45. VSS/RSS/PSS 区别 <span class="st">★★★</span></a></li>
+      <li><a href="#q46">46. 内核态与用户态 <span class="st">★★★★</span></a></li>
+      <li><a href="#q47">47. 内核空间是否共享 <span class="st">★★★</span></a></li>
+      <li><a href="#q48">48. 内核态用户态切换过程 <span class="st">★★★★★</span></a></li>
+      <li><a href="#q49">49. Linux 设备驱动开发 <span class="st">★★★★</span></a></li>
+      <li><a href="#q50">50. 字符设备驱动 <span class="st">★★★★</span></a></li>
+      <li><a href="#q51">51. 内存分配 API <span class="st">★★★★</span></a></li>
+      <li><a href="#q52">52. Bootloader 启动流程 <span class="st">★★★★</span></a></li>
+      <li><a href="#q53">53. Bootloader 与根文件系统 <span class="st">★★★</span></a></li>
+      <li><a href="#q54">54. 配置设备树与 pinctrl <span class="st">★★★★</span></a></li>
+      <li><a href="#q55">55. pinctrl 函数集 <span class="st">★★★</span></a></li>
+      <li><a href="#q56">56. GPIO Chip 测试目标 <span class="st">★</span></a></li>
+      <li><a href="#q57">57. v4l2 应用层使用 <span class="st">★★★</span></a></li>
+      <li><a href="#q58">58. V4L2 获取操作 buffer <span class="st">★★★</span></a></li>
+      <li><a href="#q59">59. 驱动变量是否在内核态 <span class="st">★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s36">3.6 其他</div>
+    <ul id="s36-list">
+      <li><a href="#q60">60. 你知道的锁 <span class="st">★★★★</span></a></li>
+      <li><a href="#q61">61. 自旋锁 vs 互斥锁 <span class="st">★★★★</span></a></li>
+      <li><a href="#q62">62. 信号量释放后调度 <span class="st">★★★</span></a></li>
+      <li><a href="#q63">63. 守护/孤儿/僵尸进程 <span class="st">★★★★</span></a></li>
+      <li><a href="#q64">64. mmap 的 API <span class="st">★★★★</span></a></li>
+      <li><a href="#q65">65. Tasklet vs Workqueue <span class="st">★★</span></a></li>
+      <li><a href="#q66">66. 阻塞与休眠原理 <span class="st">★★</span></a></li>
+      <li><a href="#q67">67. MCU 用户态内核态设计 <span class="st">★★</span></a></li>
+      <li><a href="#q68">68. 评估实时性/中断响应 <span class="st">★★</span></a></li>
+      <li><a href="#q69">69. x86 架构概述 <span class="st">★</span></a></li>
+    </ul>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <h1>操作系统 · 嵌入式校招八股</h1>
+      <p>精简重构版 · 每个问题先给一句话结论，再展开细节 · 表格 + 流程图 + 代码辅助记忆</p>
+      <p class="warn">提示：流程图依赖 mermaid.js（需联网加载）；离线时流程图仍会显示源代码块。</p>
+    </div>
+
+    <!-- ============ 3.1 ============ -->
+    <h2 id="s31" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;">3.1 概述</h2>
+
+    <!-- Q1 -->
+    <div class="q" id="q1">
+      <div class="q-head" onclick="document.getElementById('b1').open=!document.getElementById('b1').open">
+        <span class="q-idx">1</span><span class="q-title">计算机是怎么启动的？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>通电后 <b>BIOS 自检</b>并找引导设备 → 读 <b>MBR</b> → 执行 <b>Bootloader</b>（GRUB）加载内核 → 内核初始化 → 启动用户态 init。</div>
+        <details id="b1">
+          <summary>展开：四阶段启动流程</summary>
+          <div class="mermaid">
+flowchart TD
+    A[通电] --> B[BIOS 自检 + 初始化硬件]
+    B --> C[读 MBR 主引导记录]
+    C --> D[Bootloader GRUB]
+    D --> E[加载内核 Kernel]
+    E --> F[内核初始化 + 启动 init]
+          </div>
+          <table>
+            <tr><th>阶段</th><th>主体</th><th>职责</th></tr>
+            <tr><td>① BIOS</td><td>BIOS</td><td>电源自检（检测 CPU/内存/显卡），初始化硬件，按启动顺序找可引导设备</td></tr>
+            <tr><td>② MBR</td><td>硬盘第 1 扇区(LBA0,512B)</td><td>含分区表 + 引导程序，负责寻找活动分区并移交控制权</td></tr>
+            <tr><td>③ Bootloader</td><td>GRUB / Windows Boot Manager</td><td>加载操作系统内核（Kernel）</td></tr>
+            <tr><td>④ 内核</td><td>Kernel + init</td><td>内核载入内存、初始化资源与驱动，启动服务（Systemd），进入用户态</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="q" id="q2">
+      <div class="q-head" onclick="document.getElementById('b2').open=!document.getElementById('b2').open">
+        <span class="q-idx">2</span><span class="q-title">操作系统的启动模式与保护模式？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>实模式=16 位、<b>直接访问物理内存</b>(≤1MB)、用于启动期；保护模式=用<b>虚拟地址 + MMU</b> 分页/分段管理内存，现代 OS 运行于此。</div>
+        <details id="b2">
+          <summary>展开：两种模式 + 分段/分页</summary>
+          <table>
+            <tr><th>维度</th><th>实模式</th><th>保护模式</th></tr>
+            <tr><td>位宽</td><td>16 位（早期 DOS）</td><td>32/64 位（现代 OS）</td></tr>
+            <tr><td>寻址</td><td>直接访问物理内存，≤ 1MB</td><td>虚拟地址经 MMU 转物理地址</td></tr>
+            <tr><td>用途</td><td>启动阶段、BIOS 初始化</td><td>系统正常运行的核心模式</td></tr>
+          </table>
+          <h3 class="detail">保护模式的两种内存管理</h3>
+          <ul>
+            <li><b>分段</b>：内存分若干段（段基址+段长），需预分配固定段，不适合大系统。</li>
+            <li><b>分页</b>：内存分固定大小页(4KB)，页表映射虚拟→物理，支持虚拟内存、进程隔离。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="q" id="q3">
+      <div class="q-head" onclick="document.getElementById('b3').open=!document.getElementById('b3').open">
+        <span class="q-idx">3</span><span class="q-title">Linux 中异常和中断的区别及特点？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>中断=外部硬件<b>异步</b>触发；异常=CPU 执行指令<b>同步</b>触发（除零/缺页）；系统调用=用户<b>主动请求</b>内核服务（也同步）。</div>
+        <details id="b3">
+          <summary>展开：中断/异常/系统调用对比表</summary>
+          <table>
+            <tr><th>特性</th><th>中断</th><th>异常</th><th>系统调用</th></tr>
+            <tr><td>来源</td><td>外部硬件设备</td><td>CPU 内部指令异常</td><td>用户程序主动请求</td></tr>
+            <tr><td>触发方式</td><td>异步</td><td>同步</td><td>同步</td></tr>
+            <tr><td>目的</td><td>响应硬件事件</td><td>处理运行错误</td><td>提供系统服务</td></tr>
+            <tr><td>处理机制</td><td>保存现场→ISR→恢复现场</td><td>保存现场→异常处理→恢复/终止</td><td>切内核态→执行服务→返回</td></tr>
+            <tr><td>典型场景</td><td>键盘输入、硬盘读写完成</td><td>除零、非法指令、缺页</td><td>read()、文件读写、内存分配</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="q" id="q4">
+      <div class="q-head" onclick="document.getElementById('b4').open=!document.getElementById('b4').open">
+        <span class="q-idx">4</span><span class="q-title">冯诺依曼结构是什么？对应现代计算机哪些部分？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>五大模块：<b>运算器、控制器、存储器、输入设备、输出设备</b>；指令和数据统一二进制存储、按地址访问。</div>
+        <details id="b4">
+          <summary>展开：五模块对应现代硬件</summary>
+          <table>
+            <tr><th>冯诺依曼模块</th><th>职责</th><th>现代对应硬件</th></tr>
+            <tr><td>运算器</td><td>算术/逻辑运算</td><td>CPU 内 ALU</td></tr>
+            <tr><td>控制器</td><td>取指、译码、协调数据流</td><td>CPU 控制单元、南北桥芯片组</td></tr>
+            <tr><td>存储器</td><td>存指令与数据</td><td>内存 RAM、硬盘 HDD/SSD</td></tr>
+            <tr><td>输入设备</td><td>向计算机传入数据</td><td>键盘、鼠标、摄像头、扫描仪</td></tr>
+            <tr><td>输出设备</td><td>呈现处理结果</td><td>显示器、打印机、网卡</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="q" id="q5">
+      <div class="q-head" onclick="document.getElementById('b5').open=!document.getElementById('b5').open">
+        <span class="q-idx">5</span><span class="q-title">一个由 C/C++ 编译的程序占用的内存分为哪几个部分？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>五个区域：<b>栈区、堆区、全局/静态区（data+BSS）、常量区、代码区(text)</b>。</div>
+        <details id="b5">
+          <summary>展开：五个内存区域</summary>
+          <ul>
+            <li><b>栈区(stack)</b>：向下增长，编译器自动管理，存函数参数/局部变量，函数结束自动释放。</li>
+            <li><b>堆区(heap)</b>：向上增长，程序员 <code>new/malloc</code> 分配、<code>delete/free</code> 释放，不释放会内存泄漏。</li>
+            <li><b>全局/静态区</b>：已初始化全局/静态变量 + 未初始化(BSS 段)，程序结束系统回收。</li>
+            <li><b>常量区</b>：存常量字符串等，只读，程序结束回收。</li>
+            <li><b>代码区(text)</b>：存机器指令，只读，防运行时被改。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="q" id="q6">
+      <div class="q-head" onclick="document.getElementById('b6').open=!document.getElementById('b6').open">
+        <span class="q-idx">6</span><span class="q-title">Linux / Windows 中栈空间的大小是多少？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>Linux 默认 <b>8MB</b>（<code>ulimit -s</code> 调），Windows 由<b>编译器</b>决定（VC++ 默认 <b>1MB</b>）。</div>
+        <details id="b6">
+          <summary>展开：调整方式</summary>
+          <table>
+            <tr><th>平台</th><th>默认大小</th><th>调整方式</th></tr>
+            <tr><td>Linux</td><td>8 MB (8192 KB)</td><td><code>ulimit -s 32768</code>（当前会话）；永久改 /etc/security/limits.conf</td></tr>
+            <tr><td>Windows</td><td>由编译器定（VC++ 6.0 为 1 MB）</td><td>编译器设置，改动固定</td></tr>
+          </table>
+          <p style="color:var(--muted);font-size:13px;">栈过小会 Stack Overflow，过大占用资源，需按需设置。</p>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="q" id="q7">
+      <div class="q-head" onclick="document.getElementById('b7').open=!document.getElementById('b7').open">
+        <span class="q-idx">7</span><span class="q-title">Linux 中程序编译的过程（GCC 用法）？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>四阶段：<b>预编译(-E) → 编译(-S) → 汇编(-c) → 链接</b>，最终生成可执行文件。</div>
+        <details id="b7">
+          <summary>展开：GCC 四阶段</summary>
+          <pre><code>gcc -E hello.c -o hello.i   // 预编译：展开 #include/#define、删注释
+gcc -S hello.i -o hello.s   // 编译：词法/语法/语义分析，生成汇编代码
+gcc -c hello.s -o hello.o   // 汇编：生成机器码目标文件
+gcc hello.o -o hello        // 链接：链接库文件，生成可执行文件</code></pre>
+          <table>
+            <tr><th>阶段</th><th>命令</th><th>生成文件</th><th>作用</th></tr>
+            <tr><td>预编译</td><td><code>gcc -E</code></td><td>.i</td><td>处理宏、头文件、注释</td></tr>
+            <tr><td>编译</td><td><code>gcc -S</code></td><td>.s</td><td>源码转汇编</td></tr>
+            <tr><td>汇编</td><td><code>gcc -c</code></td><td>.o</td><td>汇编转目标文件</td></tr>
+            <tr><td>链接</td><td><code>gcc</code></td><td>可执行文件</td><td>链接库、符号解析</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 3.2 ============ -->
+    <h2 id="s32" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">3.2 内存管理</h2>
+
+    <!-- Q8 -->
+    <div class="q" id="q8">
+      <div class="q-head" onclick="document.getElementById('b8').open=!document.getElementById('b8').open">
+        <span class="q-idx">8</span><span class="q-title">Windows 和 Linux 环境下内存分布情况？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>分<b>用户空间 + 内核空间</b>；用户空间从低到高：代码段→data段→BSS段→堆(向上)→文件映射段(mmap)→栈(向下)。</div>
+        <details id="b8">
+          <summary>展开：用户空间六个区域（低→高）</summary>
+          <ol>
+            <li><b>代码段(Text)</b>：二进制指令，只读，低地址。</li>
+            <li><b>已初始化数据段(Data)</b>：已赋初值的全局/静态变量。</li>
+            <li><b>未初始化数据段(BSS)</b>：未初始化全局/静态变量，运行时清零。</li>
+            <li><b>堆段(Heap)</b>：malloc/new 动态分配，低→高增长。</li>
+            <li><b>文件映射段</b>：动态库(.so/.dll)、共享内存、mmap 映射。</li>
+            <li><b>栈段(Stack)</b>：局部变量、函数参数、返回地址，高→低增长。</li>
+          </ol>
+          <p style="color:var(--muted);font-size:13px;">上方为内核空间，运行内核核心代码，用户程序不可直接访问。</p>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q9 -->
+    <div class="q" id="q9">
+      <div class="q-head" onclick="document.getElementById('b9').open=!document.getElementById('b9').open">
+        <span class="q-idx">9</span><span class="q-title">Linux 内存管理的实现是怎样的？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>由<b>分页 + 虚拟内存 + 交换 + 内存分配（伙伴系统/Slab）+ mmap</b> 共同实现，多级页表 + MMU 完成地址映射。</div>
+        <details id="b9">
+          <summary>展开：六大机制</summary>
+          <ul>
+            <li><b>虚拟内存</b>：每进程独立地址空间，按需加载，页表映射。</li>
+            <li><b>分页</b>：4KB 页 ↔ 页框，页表映射，缺页中断换入。</li>
+            <li><b>交换(Swap)</b>：内存不足时把不常用页写到交换分区/文件。</li>
+            <li><b>伙伴系统</b>：按 2 的幂次分块，合并相邻空闲块减碎片。</li>
+            <li><b>Slab 分配器</b>：管理内核小对象，缓存复用减碎片。</li>
+            <li><b>内存映射(mmap)</b>：把文件/设备映射到地址空间，供访问与共享。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q10 -->
+    <div class="q" id="q10">
+      <div class="q-head" onclick="document.getElementById('b10').open=!document.getElementById('b10').open">
+        <span class="q-idx">10</span><span class="q-title">常见内存分配方式有哪些？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>三种：<b>静态存储分配</b>（编译期）、<b>栈分配</b>（函数作用域）、<b>堆分配</b>（运行时 malloc/new）。</div>
+        <details id="b10">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>方式</th><th>时机</th><th>对象</th><th>特点</th></tr>
+            <tr><td>静态存储分配</td><td>编译期</td><td>全局/静态变量</td><td>整个运行期存在，效率高，可能浪费</td></tr>
+            <tr><td>栈内存分配</td><td>函数调用</td><td>局部变量、参数</td><td>自动分配释放，效率极高，容量小(易溢出)</td></tr>
+            <tr><td>堆内存分配</td><td>运行时</td><td>malloc/new</td><td>灵活，需显式 free/delete，易泄漏/碎片</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q11 -->
+    <div class="q" id="q11">
+      <div class="q-head" onclick="document.getElementById('b11').open=!document.getElementById('b11').open">
+        <span class="q-idx">11</span><span class="q-title">介绍一下动态分区分配算法？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>四种：<b>首次适应</b>(低地址找第一个够用)、<b>最佳适应</b>(最小够用)、<b>最坏适应</b>(最大空闲)、<b>邻近适应</b>(从上次位置继续)。</div>
+        <details id="b11">
+          <summary>展开：四算法对比 + 伪代码</summary>
+          <pre><code>首次适应：从低地址起，找第一个满足的空闲分区分配
+最佳适应：空闲分区按大小递增，选最小的满足分区
+最坏适应：空闲分区按大小递减，选最大的分区
+邻近适应：循环链表，从上次分配结束位置继续查找</code></pre>
+          <table>
+            <tr><th>算法</th><th>优点</th><th>缺点</th><th>场景</th></tr>
+            <tr><td>首次适应</td><td>简单、快</td><td>低地址积累碎片</td><td>性能高、管理简单</td></tr>
+            <tr><td>最佳适应</td><td>碎片小、省大分区</td><td>小碎片多、查找慢</td><td>大任务、控碎片</td></tr>
+            <tr><td>最坏适应</td><td>剩余区大、易后续分配</td><td>浪费大分区、利用率低</td><td>减小碎片、量大</td></tr>
+            <tr><td>邻近适应</td><td>分配均匀、查找快</td><td>末尾易生小碎片</td><td>要求查找快、分配均匀</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q12 -->
+    <div class="q" id="q12">
+      <div class="q-head" onclick="document.getElementById('b12').open=!document.getElementById('b12').open">
+        <span class="q-idx">12</span><span class="q-title">虚拟技术你了解吗？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>把物理实体变多个逻辑实体：<b>时分复用</b>→时间片轮转(多进程/线程)；<b>空分复用</b>→地址映射(虚拟内存)。</div>
+        <details id="b12">
+          <summary>展开：时分 vs 空分</summary>
+          <table>
+            <tr><th>类型</th><th>核心技术</th><th>应用</th><th>优点</th></tr>
+            <tr><td>时分复用</td><td>时间片轮转</td><td>多进程/多线程、CPU 调度</td><td>提高处理器利用率、并发</td></tr>
+            <tr><td>空分复用</td><td>地址映射</td><td>虚拟内存、内存隔离</td><td>独立地址空间、扩展内存</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q13 -->
+    <div class="q" id="q13">
+      <div class="q-head" onclick="document.getElementById('b13').open=!document.getElementById('b13').open">
+        <span class="q-idx">13</span><span class="q-title">虚拟内存介绍一下？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>每进程<b>独立虚拟地址空间</b>；访问时才映射（延迟加载），MMU 用<b>页表</b>翻译，缺页时<B>页面置换</B>换入。</div>
+        <details id="b13">
+          <summary>展开：工作原理</summary>
+          <ul>
+            <li><b>虚拟地址空间分配</b>：每进程独立（栈/堆/代码/数据段），隔离不冲突。</li>
+            <li><b>延迟加载</b>：初时虚拟地址只映射磁盘文件，访问才触发缺页加载。</li>
+            <li><b>地址翻译</b>：MMU 按页表把虚拟地址映射为物理地址。</li>
+            <li><b>页表 + 页面置换</b>：内存满时换出页面。</li>
+          </ul>
+          <h3 class="detail">常见页面置换算法</h3>
+          <ul>
+            <li><b>FIFO</b>：换出最早加载的页面。</li>
+            <li><b>LRU</b>：换出最近最少使用的页面。</li>
+            <li><b>Clock</b>：优化的 LRU，指针+引用位实现。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q14 -->
+    <div class="q" id="q14">
+      <div class="q-head" onclick="document.getElementById('b14').open=!document.getElementById('b14').open">
+        <span class="q-idx">14</span><span class="q-title">虚拟内存的目的是什么？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>核心是<b>扩展物理内存</b>（跑更大的程序）+ <b>内存抽象与隔离</b>（进程间独立、简化编程）。</div>
+        <details id="b14">
+          <summary>展开：三大目的</summary>
+          <ul>
+            <li><b>扩展物理内存</b>：逻辑地址空间可大于物理内存，按需加载运行超大程序。</li>
+            <li><b>支持大程序运行</b>：不必全量映射，有限物理内存也能运行更大程序。</li>
+            <li><b>内存抽象与隔离</b>：每进程独立地址空间，隔离增强安全，程序员无需关心物理分布。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q15 -->
+    <div class="q" id="q15">
+      <div class="q-head" onclick="document.getElementById('b15').open=!document.getElementById('b15').open">
+        <span class="q-idx">15</span><span class="q-title">详细介绍一下内存管理与分页？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>分页把内存划<b>固定大小</b>：虚拟内存的「页」↔ 物理内存的「页框」，由<b>页表</b>映射，消除外部碎片、按需加载。</div>
+        <details id="b15">
+          <summary>展开：页表项结构 + 分页 vs 分段</summary>
+          <h3 class="detail">页表项字段</h3>
+          <ul>
+            <li><b>页号</b>：虚拟页编号。</li>
+            <li><b>页框号</b>：映射到的物理页框。</li>
+            <li><b>有效位</b>：页是否在内存。</li>
+            <li><b>权限位</b>：读/写/执行。</li>
+            <li><b>访问时间</b>：供置换算法用。</li>
+          </ul>
+          <h3 class="detail">分页 vs 分段（易混）</h3>
+          <table>
+            <tr><th>维度</th><th>分页</th><th>分段</th></tr>
+            <tr><td>划分依据</td><td>固定大小页(4KB)</td><td>逻辑段（代码/数据/栈）</td></tr>
+            <tr><td>碎片</td><td>无外部碎片，有内部碎片</td><td>有外部碎片</td></tr>
+            <tr><td>对用户可见</td><td>不可见</td><td>可见</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q16 -->
+    <div class="q" id="q16">
+      <div class="q-head" onclick="document.getElementById('b16').open=!document.getElementById('b16').open">
+        <span class="q-idx">16</span><span class="q-title">虚拟地址怎么转换到物理地址？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>虚拟地址 = <b>页号 + 页内偏移</b>；页号经 <b>TLB/页表</b> 查物理页框号，<b>页框号 + 偏移</b> = 物理地址；未命中则缺页换入。</div>
+        <details id="b16">
+          <summary>展开：转换流程图</summary>
+          <div class="mermaid">
+flowchart TD
+    A[虚拟地址 = 页号 | 页内偏移] --> B{TLB 命中?}
+    B -- 命中 --> C[直接取物理页框号]
+    B -- 未命中 --> D[查页表]
+    D --> E{页表项有效?}
+    E -- 有效 --> C
+    E -- 无效 --> F[缺页中断: 从磁盘换入页面]
+    F --> D
+    C --> G[物理地址 = 页框号 + 页内偏移]
+    G --> H[访问物理内存]
+          </div>
+          <ul>
+            <li><b>TLB</b>：高速缓存最近页表项，命中则跳过页表访问，加速转换。</li>
+            <li><b>缺页</b>：页表项无效→缺页中断→从磁盘加载页面→更新页表→重新执行指令。</li>
+            <li><b>页置换</b>：内存满时按 LRU/FIFO 选页面换出。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q17 -->
+    <div class="q" id="q17">
+      <div class="q-head" onclick="document.getElementById('b17').open=!document.getElementById('b17').open">
+        <span class="q-idx">17</span><span class="q-title">页表实现机制是什么？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>三种：<b>单级页表</b>(简单占内存大)、<b>多级页表</b>(省内存但多级访问慢)、<b>反向页表</b>(按物理页框记录,省内存但查复杂)。</div>
+        <details id="b17">
+          <summary>展开：三种页表对比</summary>
+          <table>
+            <tr><th>类型</th><th>结构</th><th>优点</th><th>缺点</th></tr>
+            <tr><td>单级页表</td><td>线性数组，页号直接索引</td><td>简单、查找快</td><td>大系统占内存巨大</td></tr>
+            <tr><td>多级页表</td><td>层次化，虚拟地址分多段索引</td><td>只用到的地址分配页表，省内存</td><td>多次访存，延迟高</td></tr>
+            <tr><td>反向页表</td><td>物理页框→虚拟页映射</td><td>省内存</td><td>查找复杂，需遍历/散列</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q18 -->
+    <div class="q" id="q18">
+      <div class="q-head" onclick="document.getElementById('b18').open=!document.getElementById('b18').open">
+        <span class="q-idx">18</span><span class="q-title">分页有哪些缺点？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>页表占用内存大、多级页表查找慢（TLB 未命中）、仍有<b>内部碎片</b>。</div>
+        <details id="b18">
+          <summary>展开：三大缺点</summary>
+          <ul>
+            <li><b>页表占用内存过大</b>：大地址空间/多进程各维护页表，开销大。</li>
+            <li><b>页表查找时间长</b>：多级页表需多次访存，TLB 未命中时明显。</li>
+            <li><b>内存碎片化</b>：固定大小页导致内部碎片（一页用不满）。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q19 -->
+    <div class="q" id="q19">
+      <div class="q-head" onclick="document.getElementById('b19').open=!document.getElementById('b19').open">
+        <span class="q-idx">19</span><span class="q-title">分页是否会导致内存碎片？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>分页<b>消除外部碎片</b>（任意空闲页框可被任意页用），但仍有<b>内部碎片</b>（页内未用空间）。</div>
+        <details id="b19">
+          <summary>展开：两种碎片</summary>
+          <ul>
+            <li><b>外部碎片</b>：因固定页框 + 页表映射，空闲页框都能被用，几乎消除。</li>
+            <li><b>内部碎片</b>：进程需求装不满一页时，页内剩余空间浪费（如 4KB 页存 6KB 需 2 页，剩 2KB 碎片）。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q20 -->
+    <div class="q" id="q20">
+      <div class="q-head" onclick="document.getElementById('b20').open=!document.getElementById('b20').open">
+        <span class="q-idx">20</span><span class="q-title">进程间共享内存的分配是怎样的？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>内核创建共享内存并映射到各进程用户空间；读写<b>无需内核中转、零拷贝</b>，是<b>最快 IPC</b>（但创建/权限/映射需内核参与）。</div>
+        <details id="b20">
+          <summary>展开：三个要点</summary>
+          <ul>
+            <li><b>分配位置</b>：内核空间创建，再映射到各进程用户空间地址。</li>
+            <li><b>速度最快</b>：无数据复制、直接内存访问，仅次于本进程内存访问。</li>
+            <li><b>是否经内核</b>：数据交换在用户空间完成不经内核；但创建、权限、映射仍需内核。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q21 -->
+    <div class="q" id="q21">
+      <div class="q-head" onclick="document.getElementById('b21').open=!document.getElementById('b21').open">
+        <span class="q-idx">21</span><span class="q-title">堆和栈分配对象的效率比较？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>栈分配仅<b>调栈指针 + 一次访存</b>、快但容量小；堆需<b>查空闲块 + 两次访存</b>、慢但灵活大。</div>
+        <details id="b21">
+          <summary>展开：堆 vs 栈对比表</summary>
+          <table>
+            <tr><th>维度</th><th>栈(stack)</th><th>堆(heap)</th></tr>
+            <tr><td>分配/释放</td><td>调栈指针，自动，极快</td><td>malloc/new 查空闲块，需 free/delete</td></tr>
+            <tr><td>访问速度</td><td>连续、一次访存</td><td>指针间接、两次访存，易换出</td></tr>
+            <tr><td>大小</td><td>固定(几 MB)，受限</td><td>动态调整，大块灵活</td></tr>
+            <tr><td>适用</td><td>小而短生命周期对象</td><td>大块、生命周期不定对象</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 3.3 ============ -->
+    <h2 id="s33" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">3.3 进线程相关</h2>
+
+    <!-- Q22 -->
+    <div class="q" id="q22">
+      <div class="q-head" onclick="document.getElementById('b22').open=!document.getElementById('b22').open">
+        <span class="q-idx">22</span><span class="q-title">进程、线程和协程的区别与联系？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>进程=<b>资源分配单位</b>(独立地址空间)；线程=<b>调度执行单位</b>(共享进程资源)；协程=<b>用户态轻量线程</b>(自行调度)。</div>
+        <details id="b22">
+          <summary>展开：三者对比表</summary>
+          <table>
+            <tr><th>属性</th><th>进程</th><th>线程</th><th>协程</th></tr>
+            <tr><td>定义</td><td>资源分配/管理基本单位</td><td>调度执行基本单位</td><td>线程内轻量执行单元</td></tr>
+            <tr><td>切换者</td><td>操作系统</td><td>操作系统</td><td>用户程序（非抢占）</td></tr>
+            <tr><td>拥有资源</td><td>独立地址空间、内存、fd</td><td>共享进程资源</td><td>独立寄存器/上下文</td></tr>
+            <tr><td>创建开销</td><td>大</td><td>小</td><td>极小（无内核切换）</td></tr>
+            <tr><td>通信方式</td><td>IPC(管道/消息队列等)</td><td>共享内存 + 同步机制</td><td>内部共享数据、灵活</td></tr>
+            <tr><td>场景</td><td>高隔离/安全</td><td>高效并发（Web 服务）</td><td>I/O 密集异步任务</td></tr>
+          </table>
+          <p style="color:var(--muted);font-size:13px;">联系：线程依赖进程（进程至少一个主线程），协程运行在线程之上；三者都是实现并发的手段。</p>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q23 -->
+    <div class="q" id="q23">
+      <div class="q-head" onclick="document.getElementById('b23').open=!document.getElementById('b23').open">
+        <span class="q-idx">23</span><span class="q-title">操作系统在什么情况下会启用调度器？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>进程<b>创建/终止/切换</b>、<b>中断处理</b>返回、<b>同步原语</b>等待时，调度器介入选下一个进程。</div>
+        <details id="b23">
+          <summary>展开：五种触发时机</summary>
+          <ul>
+            <li><b>进程创建</b>：新进程入就绪队列，需分配 CPU。</li>
+            <li><b>进程终止</b>：CPU 空闲，选下一进程。</li>
+            <li><b>进程切换</b>：时间片用完/系统调用/等 I/O，暂停当前进选新进程。</li>
+            <li><b>中断处理</b>：硬/软中断后决定恢复原进程还是切换。</li>
+            <li><b>同步原语</b>：信号量/互斥量等待时挂起等待进程，调度其他进程。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q24 -->
+    <div class="q" id="q24">
+      <div class="q-head" onclick="document.getElementById('b24').open=!document.getElementById('b24').open">
+        <span class="q-idx">24</span><span class="q-title">进程 A 改动了变量，进程 B 能读到新值吗？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>只有通过<b>共享内存</b>(shmget/shmat)或<b>文件映射(mmap)</b>映射同一物理内存时才可见；普通独立地址空间<b>看不到</b>。</div>
+        <details id="b24">
+          <summary>展开</summary>
+          <ul>
+            <li><b>独立地址空间</b>：两进程虚拟地址映射不同，改普通变量互不影响。</li>
+            <li><b>共享内存</b>：映射同一物理内存，A 改 B 立即看到。用 shmget/shmat 或 mmap。</li>
+            <li><b>内核态共享数据</b>：内核通过共享内存机制实现跨进程共享。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q25 -->
+    <div class="q" id="q25">
+      <div class="q-head" onclick="document.getElementById('b25').open=!document.getElementById('b25').open">
+        <span class="q-idx">25</span><span class="q-title">介绍一下你对操作系统的理解？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>OS = 管理<b>硬件资源</b>、为程序提供接口的系统软件：资源/进程/内存/文件/设备管理 + 用户界面。</div>
+        <details id="b25">
+          <summary>展开：六大职能</summary>
+          <ul>
+            <li><b>资源管理</b>：CPU/内存/存储/IO/网络分配与调度。</li>
+            <li><b>进程管理</b>：进程创建、调度、同步、通信、销毁。</li>
+            <li><b>内存管理</b>：分配、回收、保护、地址转换（虚拟内存）。</li>
+            <li><b>文件系统</b>：文件创建/读写/权限管理。</li>
+            <li><b>设备管理</b>：统一设备驱动接口。</li>
+            <li><b>用户界面</b>：CLI/GUI/Web 交互。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q26 -->
+    <div class="q" id="q26">
+      <div class="q-head" onclick="document.getElementById('b26').open=!document.getElementById('b26').open">
+        <span class="q-idx">26</span><span class="q-title">Linux 下进程间通信方式概述？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>六种：<b>管道、消息队列、共享内存、信号、信号量、套接字</b>；共享内存最快（需配信号量）。</div>
+        <details id="b26">
+          <summary>展开：六种 IPC</summary>
+          <ul>
+            <li><b>管道</b>：无名管道(亲缘进程,半双工)/有名管道 FIFO(无亲缘)。</li>
+            <li><b>共享内存</b>：映射同一物理内存，最快，需信号量同步。</li>
+            <li><b>消息队列</b>：内核消息链表，格式化消息、类型分组。</li>
+            <li><b>套接字</b>：跨主机或本地进程通信，TCP/UDP。</li>
+            <li><b>信号</b>：异步事件通知（如 Ctrl+C）。</li>
+            <li><b>信号量</b>：计数器，控制临界区互斥/同步。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q27 -->
+    <div class="q" id="q27">
+      <div class="q-head" onclick="document.getElementById('b27').open=!document.getElementById('b27').open">
+        <span class="q-idx">27</span><span class="q-title">Linux 中进线程通信方法总结</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>进程间：管道/消息队列/信号量/共享内存/信号/套接字；线程间：<b>互斥锁/条件变量/读写锁/信号量/自旋锁</b>。</div>
+        <details id="b27">
+          <summary>展开：进程通信方式 + 线程通信方式</summary>
+          <h3 class="detail">进程通信方式</h3>
+          <table>
+            <tr><th>方式</th><th>特点</th></tr>
+            <tr><td>无名管道</td><td>亲缘进程、半双工、字节流</td></tr>
+            <tr><td>有名管道 FIFO</td><td>文件系统、无亲缘、FIFO</td></tr>
+            <tr><td>消息队列</td><td>内核维护、异步、按类型接收</td></tr>
+            <tr><td>信号量</td><td>计数器，同步/互斥</td></tr>
+            <tr><td>共享内存</td><td>最快、大数据量、需同步</td></tr>
+            <tr><td>信号</td><td>异步通知、事件控制</td></tr>
+            <tr><td>套接字</td><td>跨主机/本地、TCP/IP</td></tr>
+          </table>
+          <h3 class="detail">线程通信方式</h3>
+          <table>
+            <tr><th>方式</th><th>特点</th></tr>
+            <tr><td>互斥锁</td><td>一次一线程访问共享资源</td></tr>
+            <tr><td>条件变量</td><td>等待+通知，配互斥锁</td></tr>
+            <tr><td>读写锁</td><td>读并发写互斥，读多写少</td></tr>
+            <tr><td>信号量</td><td>计数器控制资源访问</td></tr>
+            <tr><td>自旋锁</td><td>忙等不睡眠，短临界区</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q28 -->
+    <div class="q" id="q28">
+      <div class="q-head" onclick="document.getElementById('b28').open=!document.getElementById('b28').open">
+        <span class="q-idx">28</span><span class="q-title">概述一下进程调度</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>按调度算法分配 CPU 时间片：<b>FCFS / SJF / 时间片轮转(RR) / 优先级</b>，保证公平合理地共享 CPU。</div>
+        <details id="b28">
+          <summary>展开：调度流程 + 四算法</summary>
+          <div class="mermaid">
+flowchart LR
+    A[就绪队列] --> B[调度器选进程]
+    B --> C[分配 CPU 运行]
+    C --> D[时间片到 / 阻塞]
+    D --> A
+          </div>
+          <ul>
+            <li><b>FCFS</b>：按到达顺序，先来先服务。</li>
+            <li><b>SJF</b>：优先执行时间最短的作业。</li>
+            <li><b>RR</b>：轮流分配固定时间片。</li>
+            <li><b>优先级</b>：高优先级先得 CPU。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q29 -->
+    <div class="q" id="q29">
+      <div class="q-head" onclick="document.getElementById('b29').open=!document.getElementById('b29').open">
+        <span class="q-idx">29</span><span class="q-title">Linux 的任务调度介绍一下？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>默认 <b>CFS</b> 按虚拟运行时间(vruntime)公平调度；实时策略 <b>SCHED_FIFO/SCHED_RR</b>；抢占式 + 多核亲和与负载均衡。</div>
+        <details id="b29">
+          <summary>展开：五个要点</summary>
+          <ul>
+            <li><b>调度器</b>：按优先级、状态、策略决定谁得 CPU。</li>
+            <li><b>CFS</b>：默认普通进程调度，运行时间短的优先（公平）。</li>
+            <li><b>实时策略</b>：SCHED_FIFO(先入先出)、SCHED_RR(时间片)、SCHED_IDLE、SCHED_BATCH。</li>
+            <li><b>优先级</b>：实时 1~99，普通 100~139；动态优先级由 CFS 调整。</li>
+            <li><b>多核</b>：亲和性调度 + 负载均衡迁移。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q30 -->
+    <div class="q" id="q30">
+      <div class="q-head" onclick="document.getElementById('b30').open=!document.getElementById('b30').open">
+        <span class="q-idx">30</span><span class="q-title">详细介绍一下进程调度算法？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>六种：<b>FCFS、SJF、SRTN(最短剩余,抢占)、RR、优先级、MLFQ(多级反馈队列)</b>；MLFQ 综合优先级+时间片最常用。</div>
+        <details id="b30">
+          <summary>展开：六算法对比</summary>
+          <table>
+            <tr><th>算法</th><th>描述</th><th>优点</th><th>缺点</th></tr>
+            <tr><td>FCFS</td><td>按到达顺序、非抢占</td><td>简单、适合长作业</td><td>短作业饿死</td></tr>
+            <tr><td>SJF</td><td>优先最短作业、非抢占</td><td>平均等待最短</td><td>长作业饥饿、依赖预测</td></tr>
+            <tr><td>SRTN</td><td>优先剩余最短、抢占</td><td>实时好</td><td>长作业饥饿、抢占开销</td></tr>
+            <tr><td>RR</td><td>固定时间片轮转</td><td>公平</td><td>时间片长短影响性能</td></tr>
+            <tr><td>优先级</td><td>按优先级调度</td><td>满足关键任务</td><td>低优先级饥饿（需老化）</td></tr>
+            <tr><td>MLFQ</td><td>多级队列，高优先级时间片短</td><td>动态调整、兼顾长短</td><td>实现复杂</td></tr>
+          </table>
+          <p style="color:var(--muted);font-size:13px;">MLFQ：高优先级队列分短时间片，用尽降级到低优先级队列（长时间片），动态避免饥饿。</p>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q31 -->
+    <div class="q" id="q31">
+      <div class="q-head" onclick="document.getElementById('b31').open=!document.getElementById('b31').open">
+        <span class="q-idx">31</span><span class="q-title">抢占式进程调度要怎么实现？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>靠<b>时钟中断 + 优先级抢占 + 内核调度器</b>：触发中断→保存 PCB 上下文→调度器选新进程→切换并恢复。</div>
+        <details id="b31">
+          <summary>展开：实现步骤</summary>
+          <ol>
+            <li><b>触发中断</b>：定时器中断，或高优先级任务就绪。</li>
+            <li><b>保存当前进程状态</b>：寄存器、PC 存入 PCB。</li>
+            <li><b>调用调度器</b>：按算法选下一进程。</li>
+            <li><b>进程切换</b>：CPU 控制权交新进程。</li>
+            <li><b>恢复上下文并运行</b>。</li>
+          </ol>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q32 -->
+    <div class="q" id="q32">
+      <div class="q-head" onclick="document.getElementById('b32').open=!document.getElementById('b32').open">
+        <span class="q-idx">32</span><span class="q-title">进程间通信详解，介绍 Linux 相关函数？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>管道 <code>pipe/mkfifo</code>、消息队列 <code>msgget/msgsnd/msgrcv/msgctl</code>、共享内存 <code>shmget/shmat/shmdt</code>、信号量 <code>semget/semop/semctl</code>。</div>
+        <details id="b32">
+          <summary>展开：函数表 + 管道示例</summary>
+          <table>
+            <tr><th>方式</th><th>核心函数</th><th>作用</th></tr>
+            <tr><td>无名管道</td><td><code>pipe(fd[2])</code></td><td>fd[0]读端、fd[1]写端</td></tr>
+            <tr><td>有名管道</td><td><code>mkfifo(pathname, mode)</code></td><td>创建 FIFO 文件</td></tr>
+            <tr><td>消息队列</td><td><code>msgget/msgsnd/msgrcv/msgctl</code></td><td>创建/发/收/删</td></tr>
+            <tr><td>共享内存</td><td><code>shmget/shmat/shmdt/shmctl</code></td><td>创建/映射/分离/删</td></tr>
+            <tr><td>信号量</td><td><code>semget/semop/semctl</code></td><td>创建/PV/控</td></tr>
+          </table>
+          <pre><code>int pipefd[2];
+pipe(pipefd);                 // fd[0] 读端, fd[1] 写端
+pid_t pid = fork();
+if (pid == 0) {              // 子进程
+    close(pipefd[0]);
+    write(pipefd[1], "msg", 4);
+} else {                     // 父进程
+    close(pipefd[1]);
+    read(pipefd[0], buf, 100);
+}</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q33 -->
+    <div class="q" id="q33">
+      <div class="q-head" onclick="document.getElementById('b33').open=!document.getElementById('b33').open">
+        <span class="q-idx">33</span><span class="q-title">Linux 为什么分用户空间和内核空间？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>为<b>安全与稳定</b>：用户态受限，只能经<b>系统调用</b>进内核；内核统一管资源，错误被隔离。</div>
+        <details id="b33">
+          <summary>展开：交互流程 + 原因</summary>
+          <div class="mermaid">
+flowchart TD
+    A[用户空间: 应用程序] -- 系统调用 --> B[内核空间: 内核核心/驱动]
+    B -- 返回结果 --> A
+    B --> C[硬件层: CPU 内存 IO]
+          </div>
+          <ul>
+            <li><b>安全性</b>：用户程序无法直接碰内核资源，防恶意破坏。</li>
+            <li><b>稳定性</b>：用户程序崩溃不影响内核。</li>
+            <li><b>保护性</b>：特权操作仅内核可执行。</li>
+            <li><b>效率/资源管理</b>：内核统一管资源，分工高效。</li>
+            <li><b>错误隔离</b>：用户错误被限制在用户空间。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q34 -->
+    <div class="q" id="q34">
+      <div class="q-head" onclick="document.getElementById('b34').open=!document.getElementById('b34').open">
+        <span class="q-idx">34</span><span class="q-title">IO 多路复用（select / poll / epoll）</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>select 位图+每次拷贝+1024 限制；poll 动态数组去限制仍是遍历；epoll 内核<b>红黑树+就绪列表</b>、事件驱动 O(1)。</div>
+        <details id="b34">
+          <summary>展开：对比表 + epoll 底层 + LT/ET</summary>
+          <table>
+            <tr><th>维度</th><th>select</th><th>poll</th><th>epoll</th></tr>
+            <tr><td>fd 限制</td><td>1024(FD_SETSIZE)</td><td>无</td><td>无</td></tr>
+            <tr><td>数据结构</td><td>位图</td><td>动态数组</td><td>红黑树 + 就绪列表</td></tr>
+            <tr><td>传递方式</td><td>每次拷整个集合</td><td>每次拷整个集合</td><td>仅 epoll_ctl 增删改</td></tr>
+            <tr><td>效率</td><td>随 fd 线性</td><td>随 fd 线性</td><td>事件驱动，与 fd 数无关</td></tr>
+            <tr><td>平台</td><td>跨平台</td><td>跨平台</td><td>仅 Linux</td></tr>
+          </table>
+          <h3 class="detail">epoll 底层</h3>
+          <ul>
+            <li><b>红黑树</b>：管理所有注册 fd，增删改由 epoll_ctl 更新。</li>
+            <li><b>就绪列表</b>：事件触发的 fd 加入，epoll_wait 直接返回，避免遍历。</li>
+          </ul>
+          <h3 class="detail">触发模式 LT vs ET</h3>
+          <table>
+            <tr><th>模式</th><th>通知时机</th><th>特点</th></tr>
+            <tr><td>LT 水平触发</td><td>只要条件满足就持续通知</td><td>简单，可能重复通知</td></tr>
+            <tr><td>ET 边缘触发</td><td>仅状态变化时通知一次</td><td>性能高，需一次性读完(到 EAGAIN)</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q35 -->
+    <div class="q" id="q35">
+      <div class="q-head" onclick="document.getElementById('b35').open=!document.getElementById('b35').open">
+        <span class="q-idx">35</span><span class="q-title">进程状态的切换你知道多少？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>三态：<b>就绪⇄运行</b>(调度/时间片耗尽)、运行→<b>阻塞</b>(等资源)、阻塞→就绪(资源满足)。</div>
+        <details id="b35">
+          <summary>展开：状态切换图</summary>
+          <div class="mermaid">
+flowchart TD
+    A[就绪态] -- 调度器选中 --> B[运行态]
+    B -- 时间片耗尽/被抢占 --> A
+    B -- 等待资源 IO/锁 --> C[阻塞态]
+    C -- 资源满足 --> A
+          </div>
+          <ul>
+            <li><b>就绪→运行</b>：调度器选中，分配 CPU。</li>
+            <li><b>运行→就绪</b>：时间片耗尽或被抢占。</li>
+            <li><b>运行→阻塞</b>：请求资源（I/O）不可用，主动放弃 CPU。</li>
+            <li><b>阻塞→就绪</b>：等待的资源就绪。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q36 -->
+    <div class="q" id="q36">
+      <div class="q-head" onclick="document.getElementById('b36').open=!document.getElementById('b36').open">
+        <span class="q-idx">36</span><span class="q-title">多线程的执行顺序是怎样的？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>由调度器<b>动态决定</b>，开发者无法完全控制；受优先级、调度算法、时间片、同步竞争、实时需求影响。</div>
+        <details id="b36">
+          <summary>展开：五大影响因素</summary>
+          <ul>
+            <li><b>线程优先级</b>：高优先先调度。</li>
+            <li><b>调度算法</b>：RR、优先级、实时调度。</li>
+            <li><b>时间片</b>：影响响应与切换频率。</li>
+            <li><b>同步与资源竞争</b>：持锁等待影响顺序。</li>
+            <li><b>实时任务</b>：抢占普通线程。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q37 -->
+    <div class="q" id="q37">
+      <div class="q-head" onclick="document.getElementById('b37').open=!document.getElementById('b37').open">
+        <span class="q-idx">37</span><span class="q-title">Windows 中进程执行完成后静态区的处理？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>进程终止时 OS <b>统一回收</b>全部内存（静态区、堆、栈、代码段），即使未显式 free 也会回收。</div>
+        <details id="b37">
+          <summary>展开</summary>
+          <ul>
+            <li>进程结束(ExitProcess/主函数返回)，OS 回收代码段、静态区、堆、栈等所有内存。</li>
+            <li>静态区(全局/静态变量、常量)随之清除，不再占用资源。</li>
+            <li>未显式释放的动态内存也会被回收，但不建议此不良习惯。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q38 -->
+    <div class="q" id="q38">
+      <div class="q-head" onclick="document.getElementById('b38').open=!document.getElementById('b38').open">
+        <span class="q-idx">38</span><span class="q-title">单核 CPU 上的线程调度顺序？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>单核同时只跑一个线程，靠<b>时间片轮转 / 优先级 / 抢占式 / 实时调度</b>交替运行。</div>
+        <details id="b38">
+          <summary>展开：四种调度方式</summary>
+          <ul>
+            <li><b>时间片轮转</b>：固定时间片轮流，公平。</li>
+            <li><b>优先级调度</b>：高优先级先执行，同优先级轮转。</li>
+            <li><b>抢占式调度</b>：更高优先级可中断当前线程。</li>
+            <li><b>实时调度</b>：满足严格时限，推迟非实时任务。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q39 -->
+    <div class="q" id="q39">
+      <div class="q-head" onclick="document.getElementById('b39').open=!document.getElementById('b39').open">
+        <span class="q-idx">39</span><span class="q-title">线程优先级反转，如何解决？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>高优先级被中优先级阻塞（因等低优先级持锁）；解决：<b>优先级天花板</b>(静态提权)或<b>优先级继承</b>(临时继承被阻塞者优先级)。</div>
+        <details id="b39">
+          <summary>展开：定义 / 危害 / 解法</summary>
+          <ul>
+            <li><b>反转</b>：高优先级线程等低优先级释放锁，低优先级又因中优先级无法释放。</li>
+            <li><b>危害</b>：破坏实时性、调度逻辑紊乱，甚至崩溃。</li>
+          </ul>
+          <h3 class="detail">两种解法</h3>
+          <table>
+            <tr><th>方法</th><th>机制</th><th>优点</th><th>缺点</th></tr>
+            <tr><td>优先级天花板</td><td>静态：申请资源时提到该资源所有线程中最高优先级</td><td>简单、完全避免</td><td>可能不必要提权、加开销</td></tr>
+            <tr><td>优先级继承</td><td>动态：低优先级临时继承被阻塞者的优先级</td><td>灵活、仅必要时调整</td><td>实现复杂（嵌套资源）</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 3.4 ============ -->
+    <h2 id="s34" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">3.4 中断相关</h2>
+
+    <!-- Q40 -->
+    <div class="q" id="q40">
+      <div class="q-head" onclick="document.getElementById('b40').open=!document.getElementById('b40').open">
+        <span class="q-idx">40</span><span class="q-title">Linux 中断流程与处理操作？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>硬件产生中断→控制器传给 CPU→<b>保存现场</b>→执行 ISR→<b>清中断</b>→恢复现场→返回；分<b>上半部/下半部</b>。</div>
+        <details id="b40">
+          <summary>展开：中断时序</summary>
+          <div class="mermaid">
+sequenceDiagram
+    participant H as 硬件设备
+    participant C as 中断控制器
+    participant K as 内核/CPU
+    H->>C: 产生中断信号
+    C->>K: 传入中断引脚
+    Note over K: 保存现场(PC/寄存器)
+    K->>K: 跳转中断向量表执行 ISR
+    K->>K: 清除中断标志
+    Note over K: 恢复现场
+    K-->>H: 中断返回 iret
+          </div>
+          <ul>
+            <li><b>上半部(Top Half)</b>：快速处理与硬件直接相关的紧急任务。</li>
+            <li><b>下半部(Bottom Half)</b>：处理复杂非紧急任务（如数据传用户空间）。</li>
+            <li><b>优先级</b>：高优先级中断可抢占低优先级中断。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+<!-- Q41 -->
+    <div class="q" id="q41">
+      <div class="q-head" onclick="document.getElementById('b41').open=!document.getElementById('b41').open">
+        <span class="q-idx">41</span><span class="q-title">保护现场保护什么东西？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>保护<b>通用寄存器 + 程序计数器 PC + 堆栈指针 SP</b>（以及段/标志寄存器）。</div>
+        <details id="b41">
+          <summary>展开：寄存器表 + 保护/恢复流程</summary>
+          <table>
+            <tr><th>寄存器(x86)</th><th>作用</th></tr>
+            <tr><td>EAX 累加器</td><td>算术运算、返回值</td></tr>
+            <tr><td>EBX 基址寄存器</td><td>内存寻址基地址</td></tr>
+            <tr><td>ECX 计数器</td><td>循环计数器(LOOP/REP)</td></tr>
+            <tr><td>EDX 数据寄存器</td><td>扩展运算结果、I/O</td></tr>
+          </table>
+          <ul>
+            <li><b>PC</b>：指向下一条指令，硬件自动压栈。</li>
+            <li><b>SP</b>：指向当前栈顶，可能切到内核栈需保存。</li>
+            <li><b>保护现场</b>：保存通用寄存器/PC/SP（及段、标志寄存器）→ 切内核栈。</li>
+            <li><b>恢复现场</b>：恢复上述内容 → <code>iret</code> 返回被中断任务。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q42 -->
+    <div class="q" id="q42">
+      <div class="q-head" onclick="document.getElementById('b42').open=!document.getElementById('b42').open">
+        <span class="q-idx">42</span><span class="q-title">外中断和异常有什么区别？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>外中断=<b>外部硬件异步</b>触发（可屏蔽、按中断号）；异常=<b>CPU 内部同步</b>触发（除零/缺页，通常不可屏蔽）。</div>
+        <details id="b42">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>特性</th><th>外中断</th><th>异常</th></tr>
+            <tr><td>触发来源</td><td>CPU 外硬件事件</td><td>CPU 执行指令内部</td></tr>
+            <tr><td>触发时机</td><td>任意时刻，与指令无关</td><td>指令执行期间</td></tr>
+            <tr><td>触发方式</td><td>外设经中断控制器发信号</td><td>CPU 检测后自动触发</td></tr>
+            <tr><td>处理目标</td><td>响应 I/O 完成、时钟等</td><td>解决错误（缺页/非法指令）</td></tr>
+            <tr><td>优先级</td><td>可屏蔽，由中断控制器定</td><td>通常不可屏蔽</td></tr>
+            <tr><td>场景</td><td>键盘/时钟/网络中断</td><td>页面异常、算术溢出</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q43 -->
+    <div class="q" id="q43">
+      <div class="q-head" onclick="document.getElementById('b43').open=!document.getElementById('b43').open">
+        <span class="q-idx">43</span><span class="q-title">中断和轮询介绍一下</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>中断=<b>事件驱动</b>、外设主动请求、实时好、开销低；轮询=<b>CPU 主动逐设备查询</b>、简单但大量浪费 CPU。</div>
+        <details id="b43">
+          <summary>展开：对比表 + 流程</summary>
+          <table>
+            <tr><th>维度</th><th>中断</th><th>轮询</th></tr>
+            <tr><td>触发</td><td>外设主动发中断请求</td><td>CPU 主动查询状态</td></tr>
+            <tr><td>响应</td><td>及时（事件驱动）</td><td>有延迟（等轮到查询）</td></tr>
+            <tr><td>CPU 开销</td><td>低，未忙等</td><td>高，反复查询</td></tr>
+            <tr><td>适用</td><td>随机、需及时响应</td><td>简单、事件频率低</td></tr>
+          </table>
+          <h3 class="detail">中断流程</h3>
+          <ol>
+            <li>外设发中断请求；CPU 检测是否允许/被屏蔽；优先级判断。</li>
+            <li>保护现场 → 跳转 ISR → 恢复现场 → 返回。</li>
+          </ol>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 3.5 ============ -->
+    <h2 id="s35" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">3.5 内核相关</h2>
+
+    <!-- Q44 -->
+    <div class="q" id="q44">
+      <div class="q-head" onclick="document.getElementById('b44').open=!document.getElementById('b44').open">
+        <span class="q-idx">44</span><span class="q-title">介绍一下 Linux 的设备树？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>DTS 文本描述硬件（节点+属性）→ <code>dtc</code> 编译成 DTB → Bootloader 传给内核解析，实现<b>硬件与内核解耦</b>。</div>
+        <details id="b44">
+          <summary>展开：示例 + 结构</summary>
+          <pre><code>/dts-v1/;
+/ {
+    compatible = "example,board";
+    memory {
+        device_type = "memory";
+        reg = &lt;0x80000000 0x40000000&gt;;
+    };
+    soc {
+        uart@101f0000 {
+            compatible = "ns16550";
+            reg = &lt;0x101f0000 0x1000&gt;;
+            interrupts = &lt;5&gt;;
+        };
+    };
+};</code></pre>
+          <ul>
+            <li><b>节点(Node)</b>：一个硬件设备或功能单元，可嵌套。</li>
+            <li><b>属性(Property)</b>：键值对，如寄存器地址、IRQ 号、时钟频率。</li>
+            <li><b>为何需要</b>：把硬件配置从内核代码分离，同一内核对不同平台只需换 DTS。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q45 -->
+    <div class="q" id="q45">
+      <div class="q-head" onclick="document.getElementById('b45').open=!document.getElementById('b45').open">
+        <span class="q-idx">45</span><span class="q-title">Linux 下 VSS、RSS 和 PSS 的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>VSS=虚拟地址空间总量；RSS=实际占物理内存（共享全计入）；PSS=私有 + 共享<b>按比例均摊</b>。</div>
+        <details id="b45">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>指标</th><th>含义</th><th>共享内存处理</th><th>用途</th></tr>
+            <tr><td>VSS</td><td>虚拟内存集大小</td><td>包含所有分配</td><td>排查地址分配、看布局</td></tr>
+            <tr><td>RSS</td><td>常驻内存集大小</td><td>完全计入共享</td><td>看物理内存即时/泄漏</td></tr>
+            <tr><td>PSS</td><td>比例内存集大小</td><td>按进程数均摊</td><td>精确分析多进程消耗</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q46 -->
+    <div class="q" id="q46">
+      <div class="q-head" onclick="document.getElementById('b46').open=!document.getElementById('b46').open">
+        <span class="q-idx">46</span><span class="q-title">Linux 内核态与用户态，什么时候进入内核态？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>内核态<b>最高权限</b>访问一切；用户态受限。三种情况进内核：<b>系统调用 / 异常 / 中断</b>。</div>
+        <details id="b46">
+          <summary>展开：两态 + 三种进入时机</summary>
+          <ul>
+            <li><b>内核态</b>：可访问所有硬件、执行所有指令（进程/内存/设备驱动）。</li>
+            <li><b>用户态</b>：仅非特权指令，资源访问经系统调用。</li>
+          </ul>
+          <table>
+            <tr><th>进入时机</th><th>说明</th><th>示例</th></tr>
+            <tr><td>系统调用</td><td>用户主动请求服务</td><td>read()/write()/open()</td></tr>
+            <tr><td>异常</td><td>程序出错触发</td><td>除零、SegFault、PageFault</td></tr>
+            <tr><td>中断</td><td>外部硬件请求</td><td>网卡收包、磁盘读完</td></tr>
+          </table>
+          <p style="color:var(--muted);font-size:13px;">区分目的：保证安全与稳定，防止用户程序非法操作系统资源。</p>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q47 -->
+    <div class="q" id="q47">
+      <div class="q-head" onclick="document.getElementById('b47').open=!document.getElementById('b47').open">
+        <span class="q-idx">47</span><span class="q-title">两个进程的内核空间是否共享？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><b>部分共享</b>：共享内核代码、全局数据结构、驱动；不共享各自 <b>PCB、内核栈、文件描述符</b>等。</div>
+        <details id="b47">
+          <summary>展开：共享 vs 不共享</summary>
+          <table>
+            <tr><th>类别</th><th>共享部分</th><th>不共享部分</th></tr>
+            <tr><td>内核代码</td><td>系统调用、调度器、驱动</td><td>—</td></tr>
+            <tr><td>全局数据结构</td><td>进程表、页表、I/O 缓存</td><td>—</td></tr>
+            <tr><td>硬件驱动</td><td>磁盘/网络驱动接口</td><td>—</td></tr>
+            <tr><td>内核栈 / PCB / 资源</td><td>—</td><td>各进程独立的内核栈、PCB、文件描述符</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q48 -->
+    <div class="q" id="q48">
+      <div class="q-head" onclick="document.getElementById('b48').open=!document.getElementById('b48').open">
+        <span class="q-idx">48</span><span class="q-title">内核态和用户态切换过程详细描述？</span><span class="stars st5">★★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><b>系统调用 / 中断 / 异常</b>触发陷入内核（保存上下文），完成后 <code>iret/sysret</code> 恢复用户态继续执行。</div>
+        <details id="b48">
+          <summary>展开：切换时序</summary>
+          <div class="mermaid">
+sequenceDiagram
+    participant U as 用户态程序
+    participant K as 内核态
+    U->>K: 系统调用 int 0x80 / syscall
+    Note over K: 保存用户态上下文
+    K->>K: 执行系统调用处理函数
+    K-->>U: iret / sysret 返回
+    Note over U: 从被中断处继续
+          </div>
+          <ul>
+            <li><b>系统调用</b>：陷入指令(如 <code>int 0x80</code>/<code>syscall</code>)切内核，保存用户态上下文，执行服务后返回。</li>
+            <li><b>中断</b>：硬件信号 → 保存上下文 → 按中断向量表跳 ISR → 内核处理。</li>
+            <li><b>异常</b>：出错自动切入内核，可恢复则修复返回，不可恢复则终止进程。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q49 -->
+    <div class="q" id="q49">
+      <div class="q-head" onclick="document.getElementById('b49').open=!document.getElementById('b49').open">
+        <span class="q-idx">49</span><span class="q-title">Linux 设备驱动开发介绍一下？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>三类：<b>字符设备</b>(字节流,open/read/write)、<b>块设备</b>(按块,请求队列+调度)、<b>网络设备</b>(协议栈+skb)。</div>
+        <details id="b49">
+          <summary>展开：三类驱动对比</summary>
+          <table>
+            <tr><th>类型</th><th>管理对象</th><th>关键功能</th><th>场景</th></tr>
+            <tr><td>字符设备驱动</td><td>串口/键盘/鼠标</td><td>open/read/write/ioctl、中断、缓冲</td><td>串口、终端、ADC</td></tr>
+            <tr><td>块设备驱动</td><td>硬盘/U盘/光盘</td><td>请求队列、调度(CFQ/Deadline)、页缓存</td><td>硬盘、SSD、SD 卡</td></tr>
+            <tr><td>网络设备驱动</td><td>网卡/Wi-Fi</td><td>net_device、收发数据包、skb</td><td>网卡、无线模块</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q50 -->
+    <div class="q" id="q50">
+      <div class="q-head" onclick="document.getElementById('b50').open=!document.getElementById('b50').open">
+        <span class="q-idx">50</span><span class="q-title">介绍一下 Linux 字符设备驱动？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>register_chrdev/cdev_add</code> 注册 → 实现 <code>file_operations</code> → <code>mknod</code> 设备文件 → <code>request_irq</code> →（可选）mmap。</div>
+        <details id="b50">
+          <summary>展开：开发流程 + 代码</summary>
+          <div class="mermaid">
+flowchart TD
+    A[register_chrdev / cdev_add 注册] --> B[实现 file_operations]
+    B --> C[mknod 创建设备文件 /dev/xx]
+    C --> D[request_irq 注册中断]
+    D --> E[用户 open/read/write/ioctl 访问]
+          </div>
+          <pre><code>struct file_operations fops = {
+    .owner   = THIS_MODULE,
+    .open    = my_open,
+    .read    = my_read,
+    .write   = my_write,
+    .release = my_close,
+};
+int major = register_chrdev(0, "my_dev", &amp;fops);  // 动态分配主设备号</code></pre>
+          <table>
+            <tr><th>功能模块</th><th>描述</th></tr>
+            <tr><td>设备注册</td><td>register_chrdev/cdev_add，分配主/次设备号</td></tr>
+            <tr><td>文件操作接口</td><td>open/read/write/ioctl/release</td></tr>
+            <tr><td>设备文件创建</td><td>mknod /dev/xx c major minor</td></tr>
+            <tr><td>中断处理</td><td>request_irq 注册，响应硬件事件</td></tr>
+            <tr><td>内存映射</td><td>mmap 接口，remap_pfn_range 直通设备内存</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q51 -->
+    <div class="q" id="q51">
+      <div class="q-head" onclick="document.getElementById('b51').open=!document.getElementById('b51').open">
+        <span class="q-idx">51</span><span class="q-title">设备驱动中内存分配 API 有哪些？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>kmalloc</code>(物理连续小块)、<code>vmalloc</code>(虚拟连续大块)、<code>get_free_pages/alloc_pages</code>(物理连续多页)。</div>
+        <details id="b51">
+          <summary>展开：对比表 + 代码</summary>
+          <pre><code>void *p  = kmalloc(128, GFP_KERNEL);          // 物理连续小块
+void *v  = vmalloc(1024*1024);                 // 虚拟连续大块
+unsigned long pg = get_free_pages(GFP_KERNEL, 1); // 多页物理连续</code></pre>
+          <table>
+            <tr><th>API</th><th>特性</th><th>物理连续</th><th>释放</th></tr>
+            <tr><td>kmalloc()</td><td>小块内存</td><td>是</td><td>kfree()</td></tr>
+            <tr><td>vmalloc()</td><td>大块，虚拟连续</td><td>否</td><td>vfree()</td></tr>
+            <tr><td>get_free_pages()</td><td>多页内存</td><td>是</td><td>free_pages()</td></tr>
+            <tr><td>alloc_pages()</td><td>单页/多页，控制更细</td><td>是</td><td>free_pages()</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q52 -->
+    <div class="q" id="q52">
+      <div class="q-head" onclick="document.getElementById('b52').open=!document.getElementById('b52').open">
+        <span class="q-idx">52</span><span class="q-title">简单描述 Bootloader 的启动流程？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>复位 → 第一阶段(初始化 CPU/内存) → 第二阶段(加载内核镜像+DTB+传参) → 跳转内核 → 内核启动。</div>
+        <details id="b52">
+          <summary>展开：启动流程图</summary>
+          <div class="mermaid">
+flowchart TD
+    A[硬件复位/上电] --> B[第一阶段: 初始化 CPU/内存]
+    B --> C[第二阶段: 加载驱动/初始化外设]
+    C --> D[加载内核镜像 + DTB]
+    D --> E[传递启动参数 bootargs]
+    E --> F[跳转到内核入口]
+    F --> G[内核启动/挂载根文件系统]
+          </div>
+          <table>
+            <tr><th>阶段</th><th>任务</th></tr>
+            <tr><td>硬件复位</td><td>从预定义地址执行第一阶段代码</td></tr>
+            <tr><td>第一阶段</td><td>初始化 CPU/内存，加载第二阶段到 RAM</td></tr>
+            <tr><td>第二阶段</td><td>加载驱动/外围设备，加载内核与 DTB，设置启动参数</td></tr>
+            <tr><td>跳转内核</td><td>设 PC 为内核入口，开始内核初始化</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q53 -->
+    <div class="q" id="q53">
+      <div class="q-head" onclick="document.getElementById('b53').open=!document.getElementById('b53').open">
+        <span class="q-idx">53</span><span class="q-title">Bootloader 和内核根文件系统之间的关联？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>Bootloader 经 <code>bootargs</code> 传 <code>root=</code> 等参数、加载内核与 DTB；内核按参数<b>挂载根文件系统</b>，必要时用 <b>initramfs</b> 过渡。</div>
+        <details id="b53">
+          <summary>展开：关联流程</summary>
+          <table>
+            <tr><th>阶段</th><th>任务</th></tr>
+            <tr><td>Bootloader 传参</td><td>bootargs 里 root=/dev/mmcblk0p2 rw init=/sbin/init</td></tr>
+            <tr><td>加载内核与 DTB</td><td>load mmc 0:1 ... zImage / bootz 启动</td></tr>
+            <tr><td>内核解析参数</td><td>读取命令行参数定位根文件系统</td></tr>
+            <tr><td>挂载根文件系统</td><td>挂载并启动 init 程序</td></tr>
+            <tr><td>Initramfs(可选)</td><td>先挂临时 initramfs，再切到最终根文件系统</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+<!-- Q54 -->
+    <div class="q" id="q54">
+      <div class="q-head" onclick="document.getElementById('b54').open=!document.getElementById('b54').open">
+        <span class="q-idx">54</span><span class="q-title">配置设备树与 pinctrl 的方法？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>在 .dts/.dtsi 定义 <b>pinctrl 节点</b>（pinmux/上下拉/驱动强度），设备节点用 <code>pinctrl-0</code> 引用，<code>dtc</code> 编译为 dtb。</div>
+        <details id="b54">
+          <summary>展开：示例 + 属性表</summary>
+          <pre><code>&amp;pinctrl {
+    uart0_pins: uart0 {
+        pinmux = &lt;PINMUX_UART0_TX | MUX_FUNC1&gt;,
+                 &lt;PINMUX_UART0_RX | MUX_FUNC1&gt;;
+        bias-disable;
+        drive-strength = &lt;4&gt;;
+    };
+};
+&amp;uart0 {
+    pinctrl-names = "default";
+    pinctrl-0 = &lt;&amp;uart0_pins&gt;;
+    status = "okay";
+};</code></pre>
+          <table>
+            <tr><th>属性</th><th>描述</th></tr>
+            <tr><td>pinmux</td><td>引脚复用功能(GPIO/UART/I2C)</td></tr>
+            <tr><td>bias-disable/pull-up/pull-down</td><td>上下拉状态</td></tr>
+            <tr><td>drive-strength</td><td>驱动强度</td></tr>
+            <tr><td>pinctrl-names/pinctrl-0</td><td>绑定设备与引脚配置</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q55 -->
+    <div class="q" id="q55">
+      <div class="q-head" onclick="document.getElementById('b55').open=!document.getElementById('b55').open">
+        <span class="q-idx">55</span><span class="q-title">pinctrl 中不同的函数集及其功能？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>五类：<b>引脚复用</b>(pinmux_select)、<b>电气属性</b>(pinconf_set_*)、<b>GPIO</b>(gpio_*)、<b>状态切换</b>(pinctrl_select_state)、<b>调试</b>(pinmux_dump)。</div>
+        <details id="b55">
+          <summary>展开：函数集表</summary>
+          <table>
+            <tr><th>功能类别</th><th>相关函数</th><th>功能</th></tr>
+            <tr><td>引脚复用</td><td>pinmux_select(), pinmux_disable()</td><td>选功能模式(GPIO/UART/SPI)</td></tr>
+            <tr><td>电气属性配置</td><td>pinconf_set_pull(), pinconf_set_drive_strength()</td><td>上下拉、驱动强度、输入/输出</td></tr>
+            <tr><td>GPIO 模式</td><td>gpio_direction_input/output(), gpio_set_value()</td><td>设方向、读写电平</td></tr>
+            <tr><td>状态切换组管理</td><td>pinctrl_select_state(), pinctrl_lookup_state()</td><td>切换引脚组状态(active/idle)</td></tr>
+            <tr><td>调试日志</td><td>pinmux_dump(), pinconf_dump()</td><td>查询引脚配置</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q56 -->
+    <div class="q" id="q56">
+      <div class="q-head" onclick="document.getElementById('b56').open=!document.getElementById('b56').open">
+        <span class="q-idx">56</span><span class="q-title">GPIO Chip 的测试目标？</span><span class="stars st1">★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>验证 <b>注册 / 方向设置 / 输出 / 输入 / 中断 / 并发</b> 是否正常。</div>
+        <details id="b56">
+          <summary>展开：测试要点</summary>
+          <ul>
+            <li><b>注册正确</b>：/sys/class/gpio 或 /sys/kernel/debug/gpio 显示正确。</li>
+            <li><b>方向设置</b>：in/out 切换正常。</li>
+            <li><b>输出功能</b>：设置高低电平，硬件响应。</li>
+            <li><b>输入功能</b>：正确读取外部电平。</li>
+            <li><b>中断功能</b>：上升/下降沿触发 ISR 正常。</li>
+            <li><b>并发</b>：多线程读写无竞争/死锁。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q57 -->
+    <div class="q" id="q57">
+      <div class="q-head" onclick="document.getElementById('b57').open=!document.getElementById('b57').open">
+        <span class="q-idx">57</span><span class="q-title">在 v4l2 的应用层是如何使用的？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>open → QUERYCAP → S_FMT → REQBUFS → mmap → STREAMON → DQBUF/QBUF → STREAMOFF → munmap/close</code>。</div>
+        <details id="b57">
+          <summary>展开：九步流程</summary>
+          <div class="mermaid">
+flowchart LR
+    A[open] --> B[QUERYCAP 查能力]
+    B --> C[S_FMT 设格式]
+    C --> D[REQBUFS 申请缓冲区]
+    D --> E[mmap 映射]
+    E --> F[STREAMON 开启]
+    F --> G[DQBUF/QBUF 取放数据]
+    G --> H[STREAMOFF/munmap/close]
+          </div>
+          <table>
+            <tr><th>步骤</th><th>功能</th></tr>
+            <tr><td>1. open()</td><td>打开 /dev/video0</td></tr>
+            <tr><td>2. VIDIOC_QUERYCAP</td><td>查询设备能力</td></tr>
+            <tr><td>3. VIDIOC_S_FMT</td><td>设置分辨率、像素格式</td></tr>
+            <tr><td>4. VIDIOC_REQBUFS</td><td>请求缓冲区</td></tr>
+            <tr><td>5. mmap()</td><td>映射缓冲区到用户空间</td></tr>
+            <tr><td>6. VIDIOC_STREAMON</td><td>启动视频流</td></tr>
+            <tr><td>7. DQBUF/QBUF</td><td>取/放视频帧</td></tr>
+            <tr><td>8. STREAMOFF</td><td>停止视频流</td></tr>
+            <tr><td>9. munmap/close</td><td>释放资源、关设备</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q58 -->
+    <div class="q" id="q58">
+      <div class="q-head" onclick="document.getElementById('b58').open=!document.getElementById('b58').open">
+        <span class="q-idx">58</span><span class="q-title">V4L2 中如何获取和操作 buffer 内容？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>REQBUFS</code> 申请 → <code>QUERYBUF</code> 查偏移长度 → <code>mmap</code> 映射 → <code>QBUF</code> 入队 → <code>DQBUF</code> 取数据 → 处理 → <code>QBUF</code> 放回。</div>
+        <details id="b58">
+          <summary>展开：七步流程</summary>
+          <ol>
+            <li><b>请求缓冲区</b>：VIDIOC_REQBUFS 指定数量与访问模式。</li>
+            <li><b>查询信息</b>：VIDIOC_QUERYBUF 获取偏移/长度。</li>
+            <li><b>内存映射</b>：mmap 映射到用户空间。</li>
+            <li><b>排队</b>：VIDIOC_QBUF 入队。</li>
+            <li><b>获取数据</b>：VIDIOC_DQBUF 取出已填充缓冲区。</li>
+            <li><b>处理内容</b>：读取 buf.bytesused 大小数据。</li>
+            <li><b>放回队列</b>：VIDIOC_QBUF 重新入队。</li>
+          </ol>
+          <pre><code>struct v4l2_buffer buf;
+buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+buf.memory = V4L2_MEMORY_MMAP;
+// mmap 后直接访问 buffers[buf.index] 即图像数据
+unsigned char *data = (unsigned char *)buffers[buf.index];</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q59 -->
+    <div class="q" id="q59">
+      <div class="q-head" onclick="document.getElementById('b59').open=!document.getElementById('b59').open">
+        <span class="q-idx">59</span><span class="q-title">进程调用设备驱动时，驱动中的变量是否在内核态？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>是，在内核态；<b>全局变量所有进程共享</b>（需锁防竞态），<b>局部变量各栈私有</b>，<code>private_data</code> 可每进程独立。</div>
+        <details id="b59">
+          <summary>展开：变量分类</summary>
+          <ul>
+            <li><b>全局变量</b>：所有调用该驱动的进程共享，需互斥锁/自旋锁保护。</li>
+            <li><b>局部变量</b>：栈上，各进程独立栈，不共享。</li>
+            <li><b>设备上下文</b>：<code>file-&gt;private_data</code> 为每进程维护独立数据，避免干扰。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 3.6 ============ -->
+    <h2 id="s36" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">3.6 其他</h2>
+
+    <!-- Q60 -->
+    <div class="q" id="q60">
+      <div class="q-head" onclick="document.getElementById('b60').open=!document.getElementById('b60').open">
+        <span class="q-idx">60</span><span class="q-title">介绍一下你知道的锁？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><b>读写锁</b>(读并发写互斥)、<b>互斥锁</b>(失败睡眠)、<b>条件变量</b>(配锁等条件)、<b>自旋锁</b>(忙等)。</div>
+        <details id="b60">
+          <summary>展开：锁类型表 + 代码</summary>
+          <table>
+            <tr><th>锁</th><th>特点</th><th>适用</th></tr>
+            <tr><td>读写锁</td><td>读并发、写互斥、写优先</td><td>读多写少</td></tr>
+            <tr><td>互斥锁</td><td>一次一线程，失败睡眠</td><td>持锁较长</td></tr>
+            <tr><td>条件变量</td><td>等待+通知，配互斥锁</td><td>生产者-消费者</td></tr>
+            <tr><td>自旋锁</td><td>忙等不睡</td><td>短临界区、多核</td></tr>
+          </table>
+          <pre><code>pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_lock(&amp;lock);    // 加锁，失败则睡眠阻塞
+  // 临界区
+pthread_mutex_unlock(&amp;lock);</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q61 -->
+    <div class="q" id="q61">
+      <div class="q-head" onclick="document.getElementById('b61').open=!document.getElementById('b61').open">
+        <span class="q-idx">61</span><span class="q-title">自旋锁和互斥锁的区别？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>自旋锁<b>忙等不睡眠</b>、短临界区多核高效；互斥锁<b>睡眠阻塞</b>、长临界区省 CPU。</div>
+        <details id="b61">
+          <summary>展开：对比表</summary>
+          <table>
+            <tr><th>维度</th><th>自旋锁</th><th>互斥锁</th></tr>
+            <tr><td>等待机制</td><td>忙等，不阻塞</td><td>阻塞睡眠</td></tr>
+            <tr><td>实现</td><td>原子操作(test-and-set/CAS)</td><td>同步原语/系统调用</td></tr>
+            <tr><td>适用场景</td><td>持锁短、多核、高实时</td><td>持锁长、单核、通用多线程</td></tr>
+            <tr><td>性能开销</td><td>无切换，但浪费 CPU</td><td>有上下文切换开销</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q62 -->
+    <div class="q" id="q62">
+      <div class="q-head" onclick="document.getElementById('b62').open=!document.getElementById('b62').open">
+        <span class="q-idx">62</span><span class="q-title">信号量释放后调度下一个线程是怎样的？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>信号量释放唤醒等待线程回到<b>就绪队列</b>，由调度器按<b>优先级/调度策略</b>选出下一个线程运行。</div>
+        <details id="b62">
+          <summary>展开</summary>
+          <ul>
+            <li>V 操作(释放)后，唤醒因 P 操作阻塞的线程。</li>
+            <li>被唤醒线程从阻塞态 → 就绪态，进入就绪队列。</li>
+            <li>具体下一个运行者由调度算法（优先级/RR 等）决定。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q63 -->
+    <div class="q" id="q63">
+      <div class="q-head" onclick="document.getElementById('b63').open=!document.getElementById('b63').open">
+        <span class="q-idx">63</span><span class="q-title">守护进程、僵尸进程和孤儿进程</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>守护=<b>后台无终端</b>；孤儿=<b>父先退</b>被 init 收养；僵尸=<b>子已退父未 wait</b>，占进程表项。</div>
+        <details id="b63">
+          <summary>展开：对比表 + 处理</summary>
+          <table>
+            <tr><th>类型</th><th>定义</th><th>特性/问题</th><th>解决</th></tr>
+            <tr><td>守护进程</td><td>无控制终端、后台长期服务</td><td>如 httpd/sshd</td><td>按标准步骤创建</td></tr>
+            <tr><td>孤儿进程</td><td>父进程先退出</td><td>被 init(pid=1) 收养</td><td>尽量少产生</td></tr>
+            <tr><td>僵尸进程</td><td>子已退、父未回收状态</td><td>占进程表项，多了无法创建新进程</td><td>wait()/waitpid() 或 SIGCHLD 置 SIG_IGN</td></tr>
+          </table>
+          <h3 class="detail">创建守护进程步骤</h3>
+          <ol>
+            <li>fork() 子进程后父退出（后台）。</li>
+            <li>setsid() 脱离控制终端。</li>
+            <li>再次 fork() 避免重绑终端。</li>
+            <li>关闭文件描述符、改工作目录到 /、umask(0)。</li>
+            <li>SIGCHLD 置 SIG_IGN 避免僵尸。</li>
+          </ol>
+        </details>
+      </div>
+    </div>
+<!-- Q64 -->
+    <div class="q" id="q64">
+      <div class="q-head" onclick="document.getElementById('b64').open=!document.getElementById('b64').open">
+        <span class="q-idx">64</span><span class="q-title">解释一下 mmap 的 API</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>mmap 把<b>文件/设备映射到进程地址空间</b>，让进程用<b>内存指针直接读写文件</b>，省去 read/write 两次拷贝；用 <code>munmap</code> 解除映射。</div>
+        <details id="b64">
+          <summary>展开：函数原型 + 参数表 + 示例</summary>
+          <h3 class="detail">函数原型</h3>
+          <pre><code>void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+int  munmap(void *addr, size_t length);   // 解除映射</code></pre>
+          <h3 class="detail">参数说明</h3>
+          <table>
+            <tr><th>参数</th><th>含义</th><th>常见取值</th></tr>
+            <tr><td><code>addr</code></td><td>映射起始地址</td><td><code>NULL</code>（由内核自动分配）</td></tr>
+            <tr><td><code>length</code></td><td>映射大小（字节）</td><td>页对齐的整数</td></tr>
+            <tr><td><code>prot</code></td><td>访问权限</td><td>PROT_READ / PROT_WRITE / PROT_EXEC / PROT_NONE</td></tr>
+            <tr><td><code>flags</code></td><td>映射类型</td><td>MAP_SHARED（共享）/ MAP_PRIVATE（私有，写时拷贝）</td></tr>
+            <tr><td><code>fd</code></td><td>要映射的文件描述符</td><td>由 <code>open()</code> 返回</td></tr>
+            <tr><td><code>offset</code></td><td>文件内偏移</td><td>通常为 0（需页对齐）</td></tr>
+          </table>
+          <h3 class="detail">示例代码</h3>
+          <pre><code>#include &lt;sys/mman.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;stdio.h&gt;
+
+int main() {
+    int fd = open("test.txt", O_RDWR);
+    if (fd == -1) { perror("open"); return -1; }
+
+    size_t length = 4096;
+    char *map = mmap(NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (map == MAP_FAILED) { perror("mmap"); close(fd); return -1; }
+
+    map[0] = 'H';                  // 直接改映射内存 = 写文件
+    if (munmap(map, length) == -1) // 解除映射
+        perror("munmap");
+    close(fd);
+    return 0;
+}</code></pre>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q65 -->
+    <div class="q" id="q65">
+      <div class="q-head" onclick="document.getElementById('b65').open=!document.getElementById('b65').open">
+        <span class="q-idx">65</span><span class="q-title">Tasklet 和 Workqueue 的底层区别</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>Tasklet 跑在<b>软中断上下文</b>、<b>不能睡眠</b>、优先级高；Workqueue 跑在<b>进程上下文</b>、<b>可睡眠</b>、更灵活但慢。快任务用 Tasklet，耗时任务用 Workqueue。</div>
+        <details id="b65">
+          <summary>展开：定义 + 底层区别表</summary>
+          <ul>
+            <li><b>Tasklet</b>：轻量级软中断机制，把部分中断处理从硬中断挪到软中断上下文完成；不能睡眠、不能调阻塞函数，适合快速、非阻塞的延迟任务。</li>
+            <li><b>Workqueue</b>：在进程上下文中，由<b>内核线程</b>执行；允许睡眠，适合多次 I/O、耗资源等复杂任务。</li>
+          </ul>
+          <h3 class="detail">底层区别</h3>
+          <table>
+            <tr><th>维度</th><th>Tasklet</th><th>Workqueue</th></tr>
+            <tr><td>执行上下文</td><td>软中断上下文，<b>不能睡眠</b></td><td>进程上下文，可调阻塞 API</td></tr>
+            <tr><td>调度方式</td><td>由硬中断处理程序调度，优先级高</td><td>由内核线程调度，优先级取决于调度器</td></tr>
+            <tr><td>适用场景</td><td>短期、简单、实时性高的任务</td><td>复杂、耗时（文件系统、多次 I/O）</td></tr>
+            <tr><td>性能/灵活性</td><td>快，但功能受限</td><td>相对慢，但更灵活</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q66 -->
+    <div class="q" id="q66">
+      <div class="q-head" onclick="document.getElementById('b66').open=!document.getElementById('b66').open">
+        <span class="q-idx">66</span><span class="q-title">阻塞与休眠原理</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>阻塞=<b>被动等事件</b>（如 I/O 完成、信号），挂起且不占 CPU；休眠=<b>主动让出 CPU</b> 等时间/条件。前者事件驱动，后者时间控制。</div>
+        <details id="b66">
+          <summary>展开：定义 + 区别表</summary>
+          <ul>
+            <li><b>阻塞</b>：等事件发生时任务被挂起、进入睡眠，从运行队列移除、不占 CPU；事件到来或超时后被唤醒重入队列。常用 <code>wait_event()</code> / <code>wait_event_interruptible()</code>。</li>
+            <li><b>休眠</b>：任务<b>主动</b>让出 CPU 进入睡眠，等指定时间或条件满足再被唤醒。常用 <code>msleep()</code> / <code>ssleep()</code>。</li>
+          </ul>
+          <h3 class="detail">主要区别</h3>
+          <table>
+            <tr><th>维度</th><th>阻塞</th><th>休眠</th></tr>
+            <tr><td>触发方式</td><td>被动：等外部事件</td><td>主动：主动让出 CPU</td></tr>
+            <tr><td>等待对象</td><td>事件（I/O、信号）</td><td>时间/条件</td></tr>
+            <tr><td>CPU 占用</td><td>不占用</td><td>不占用</td></tr>
+            <tr><td>适用场景</td><td>事件驱动型任务</td><td>时间控制型（简单延迟）</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q67 -->
+    <div class="q" id="q67">
+      <div class="q-head" onclick="document.getElementById('b67').open=!document.getElementById('b67').open">
+        <span class="q-idx">67</span><span class="q-title">MCU 上如何设计用户态和内核态</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>高端 MCU 用<b>硬件特权级</b>（特权/非特权模式）划分；低端 MCU 无硬件支持，靠<b>软件模拟</b>（任务隔离 + 系统调用 + 权限管理）实现。</div>
+        <details id="b67">
+          <summary>展开：两条路线</summary>
+          <h3 class="detail">① 硬件支持（如 ARM Cortex-M 特权级）</h3>
+          <ul>
+            <li><b>特权模式</b>：可访问全部资源（内核内存、外设），内核与驱动运行于此。</li>
+            <li><b>非特权模式</b>：只能访问有限资源、禁止特权指令，用户任务运行于此，经系统调用与内核交互。</li>
+            <li><b>流程</b>：启动 → 特权模式加载内核 → 用户任务切到非特权模式受限运行 → 需特权操作时发系统调用 → 内核完成后返回。</li>
+          </ul>
+          <h3 class="detail">② 软件模拟（低端 MCU）</h3>
+          <ul>
+            <li><b>任务隔离</b>：调度器把用户任务与内核任务隔离，防止用户任务直接访问内核数据/硬件。</li>
+            <li><b>系统调用机制</b>：定义一组接口，用户任务只能经系统调用请求内核服务，内核验证权限后执行。</li>
+            <li><b>权限管理</b>：严格限制用户任务对系统资源的访问范围。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q68 -->
+    <div class="q" id="q68">
+      <div class="q-head" onclick="document.getElementById('b68').open=!document.getElementById('b68').open">
+        <span class="q-idx">68</span><span class="q-title">如何评估操作系统的实时性？如何测算中断响应时间</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>评估靠 4 指标：<b>调度延迟、中断延迟、任务响应时间、抖动</b>；测中断响应时间可用<b>硬件计时器</b>或<b>软件时间戳</b>。</div>
+        <details id="b68">
+          <summary>展开：评估指标 + 测算方法</summary>
+          <h3 class="detail">评估实时性的四个指标</h3>
+          <table>
+            <tr><th>指标</th><th>含义</th><th>说明</th></tr>
+            <tr><td>调度延迟</td><td>任务就绪 → 被调度上 CPU 的时间</td><td>取决于调度算法、优先级管理、任务复杂度</td></tr>
+            <tr><td>中断延迟</td><td>硬件中断触发 → ISR 开始执行的时间</td><td>受中断屏蔽时间、优先级配置影响</td></tr>
+            <tr><td>任务响应时间</td><td>任务准备好 → 实际开始执行</td><td>≈ 调度延迟 + 中断延迟，实时性的直接体现</td></tr>
+            <tr><td>抖动 Jitter</td><td>同一任务/中断响应时间的波动幅度</td><td>抖动越小实时性越强（工业控制关键指标）</td></tr>
+          </table>
+          <h3 class="detail">测算中断响应时间</h3>
+          <ul>
+            <li><b>硬件计时器</b>：中断触发点启动计时器 → ISR 入口停止 → 读差值，精确度高，适合嵌入式。</li>
+            <li><b>软件测量</b>：中断触发前记基准时间戳 → ISR 开始再记时间戳 → 比较两时间戳求差值。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q69 -->
+    <div class="q" id="q69">
+      <div class="q-head" onclick="document.getElementById('b69').open=!document.getElementById('b69').open">
+        <span class="q-idx">69</span><span class="q-title">x86 架构概述</span><span class="stars st1">★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>x86 是 Intel 的 CISC 处理器架构，从 8086(16位，段式) → IA-32(32位，分页) → x86-64(AMD 扩展，64位) 演进，<b>向后兼容</b>旧软件。</div>
+        <details id="b69">
+          <summary>展开：定义 + 发展史</summary>
+          <ul>
+            <li>x86 由 Intel 于 1978 年随 8086 微处理器推出，最初是 16 位，后扩展为 32 位（IA-32）与 64 位（x86-64），靠<b>复杂指令集（CISC）</b>支撑多种计算任务，并向后兼容早期软件。</li>
+          </ul>
+          <h3 class="detail">发展历史</h3>
+          <table>
+            <tr><th>处理器</th><th>关键特性</th></tr>
+            <tr><td>8086</td><td>16 位，1MB 寻址，段式内存管理（段地址 + 偏移）</td></tr>
+            <tr><td>80286</td><td>引入<b>保护模式</b>，多任务，寻址 16MB</td></tr>
+            <tr><td>80386</td><td>首个 32 位，虚拟内存最大 4GB，引入<b>分页机制</b></td></tr>
+            <tr><td>80486</td><td>集成 FPU（浮点单元）+ 一级缓存 L1</td></tr>
+            <tr><td>Pentium</td><td>支持 SMP 对称多处理与超标量架构</td></tr>
+            <tr><td>x86-64</td><td>AMD 提出的 64 位扩展，地址空间可达 16EB，更多通用寄存器，成为现代标准</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad:true, theme:'default', securityLevel:'loose',
+    flowchart:{ curve:'basis' }, themeVariables:{ fontFamily:'"Segoe UI","Microsoft YaHei",sans-serif' } });
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+# Local credentials; keep example configuration files.
+*.key
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.p12
+*.pfx
+
+# Bundled runtimes and local dependencies are not source code.
+/runtime/
+/node_modules/
+
+# Local server state, logs and temporary outputs.
+.server-port
+*.log
+*.tmp
+*.bak
+/coverage/
+/test-results/
+/playwright-report/
+
+# Screenshots of the local test profile.
+/docs/分类页面预览.png
+/docs/简化页面预览.png
+
+# Local editor / agent configuration.
+/.codex/
+/.agents/
+/.vscode/
+.DS_Store
+Thumbs.db

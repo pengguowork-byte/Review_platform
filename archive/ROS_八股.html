@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROS · 嵌入式校招八股（精简重构版）</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#ffffff; --border:#e3e8ef; --text:#1f2937; --muted:#6b7280;
+    --accent:#2563eb; --accent-soft:#eef4ff; --h1:#0f172a;
+    --star5:#dc2626; --star4:#ea580c; --star3:#ca8a04; --star2:#16a34a; --star1:#64748b;
+    --codebg:#0f172a; --codetext:#e2e8f0;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;}
+  a{color:var(--accent);text-decoration:none;}
+
+  /* 布局 */
+  .layout{display:flex;}
+  aside{
+    width:300px;min-width:300px;height:100vh;position:sticky;top:0;overflow-y:auto;
+    background:#0f172a;color:#cbd5e1;padding:20px 14px;font-size:13px;
+  }
+  aside h2{color:#fff;font-size:15px;margin:0 0 12px;letter-spacing:1px;}
+  aside .note{font-size:11px;color:#64748b;margin-bottom:16px;line-height:1.5;}
+  aside .sec{margin:10px 0 4px;font-weight:700;color:#93c5fd;font-size:13px;cursor:pointer;}
+  aside .sec:hover{color:#bfdbfe;}
+  aside ul{list-style:none;margin:0;padding:0 0 0 8px;border-left:1px solid #1e293b;}
+  aside li a{display:block;padding:4px 8px;color:#94a3b8;border-radius:4px;transition:.15s;}
+  aside li a:hover{color:#fff;background:#1e293b;}
+  aside li a .st{opacity:.7;font-size:11px;}
+
+  main{flex:1;padding:28px 36px;max-width:960px;}
+  .topbar{margin-bottom:20px;}
+  .topbar h1{font-size:22px;color:var(--h1);margin:0 0 6px;}
+  .topbar p{color:var(--muted);font-size:13px;margin:0;}
+
+  /* 卡片 */
+  .q{background:var(--card);border:1px solid var(--border);border-radius:10px;margin:14px 0;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04);}
+  .q-head{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:#fbfcfe;}
+  .q-head:hover{background:#f6f8fb;}
+  .q-idx{color:var(--muted);font-size:12px;font-weight:600;min-width:22px;}
+  .q-title{font-weight:600;flex:1;font-size:15px;}
+  .stars{font-size:13px;white-space:nowrap;letter-spacing:1px;}
+  .stars.st5{color:var(--star5);} .stars.st4{color:var(--star4);} .stars.st3{color:var(--star3);}
+  .stars.st2{color:var(--star2);} .stars.st1{color:var(--star1);}
+
+  .q-body{padding:4px 16px 16px;border-top:1px solid var(--border);}
+  /* 一句话结论 */
+  .gist{margin:12px 0 4px;padding:10px 14px;background:var(--accent-soft);border-left:4px solid var(--accent);border-radius:6px;font-weight:600;color:#1e3a8a;}
+  .gist .lbl{display:inline-block;font-size:11px;color:var(--accent);font-weight:700;margin-right:6px;letter-spacing:1px;}
+
+  details{border-top:1px dashed var(--border);margin-top:8px;padding-top:8px;}
+  summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:600;user-select:none;outline:none;}
+  summary:hover{color:var(--accent);}
+  details[open] summary{margin-bottom:8px;}
+
+  h3.detail{font-size:13px;color:var(--h1);margin:14px 0 6px;border-left:3px solid var(--accent);padding-left:8px;}
+  ul,ol{margin:6px 0;padding-left:22px;}
+  li{margin:3px 0;}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px;}
+  th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top;}
+  th{background:#f1f5f9;font-weight:600;}
+  tr:nth-child(even) td{background:#fafbfc;}
+  code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-family:"JetBrains Mono",Consolas,monospace;font-size:12.5px;color:#b91c1c;}
+  pre{background:var(--codebg);color:var(--codetext);padding:14px 16px;border-radius:8px;overflow-x:auto;font-size:12.5px;line-height:1.6;}
+  pre code{background:none;color:inherit;padding:0;}
+  .tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;background:#f1f5f9;color:var(--muted);margin:2px 3px 2px 0;}
+  .tag.hot{background:#fee2e2;color:#b91c1c;}
+  .mermaid{background:#fff;padding:10px;border-radius:8px;border:1px solid var(--border);margin:10px 0;text-align:center;}
+  .warn{font-size:11px;color:var(--muted);margin:0 0 4px;}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <h2>ROS · 八股</h2>
+    <div class="note">精简重构版 · 分层式<br>一句话结论 → 展开详情<br><span style="color:#dc2626">★</span> 越多越重要</div>
+
+    <div class="sec" data-sec="s71">7.1 基础概念类</div>
+    <ul id="s71-list">
+      <li><a href="#q1">1. ROS 理解 <span class="st">★★★</span></a></li>
+      <li><a href="#q2">2. ROS1 vs ROS2 <span class="st">★★★★</span></a></li>
+      <li><a href="#q3">3. 消息传递流程 <span class="st">★★</span></a></li>
+      <li><a href="#q4">4. DDS QoS <span class="st">★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s72">7.2 通信机制类</div>
+    <ul id="s72-list">
+      <li><a href="#q5">5. 通信机制与场景 <span class="st">★★★★</span></a></li>
+      <li><a href="#q6">6. Topic vs Service <span class="st">★★★★</span></a></li>
+    </ul>
+
+    <div class="sec" data-sec="s73">7.3 工具与命令类</div>
+    <ul id="s73-list">
+      <li><a href="#q7">7. 常用 ROS 命令 <span class="st">★★★★</span></a></li>
+      <li><a href="#q8">8. 常用 ROS 工具 <span class="st">★★★</span></a></li>
+      <li><a href="#q9">9. rosrun / rosbag <span class="st">★★★</span></a></li>
+      <li><a href="#q10">10. roslaunch vs rosrun <span class="st">★★★</span></a></li>
+      <li><a href="#q11">11. 如何杀死进程 <span class="st">★★★★</span></a></li>
+    </ul>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <h1>机器人操作系统（ROS） · 嵌入式校招八股</h1>
+      <p>精简重构版 · 每个问题先给一句话结论，再展开细节 · 表格 + 流程图 + 代码辅助记忆</p>
+      <p class="warn">提示：流程图依赖 mermaid.js（需联网加载）；离线时流程图仍会显示源代码块。</p>
+    </div>
+
+    <!-- ============ 7.1 ============ -->
+    <h2 id="s71" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;">7.1 基础概念类</h2>
+
+    <!-- Q1 -->
+    <div class="q" id="q1">
+      <div class="q-head" onclick="document.getElementById('b1').open=!document.getElementById('b1').open">
+        <span class="q-idx">1</span><span class="q-title">介绍一下你对 ROS 操作系统的理解？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>ROS 不是真正的操作系统，而是<b>机器人开发框架 + 工具集</b>：提供标准通信机制让分布式「节点」松耦合协作，让你专注算法而非底层通信。</div>
+        <details id="b1">
+          <summary>展开：本质 &amp; 核心组件</summary>
+          <h3 class="detail">本质</h3>
+          <ul>
+            <li>ROS 并非传统意义操作系统，而是一套<b>支持机器人开发的框架和工具集</b>。</li>
+            <li>提供标准通信机制，让分布式软件模块之间轻松通信，开发者不必重复实现底层通信。</li>
+          </ul>
+          <h3 class="detail">核心组件</h3>
+          <table>
+            <tr><th>组件</th><th>说明</th></tr>
+            <tr><td>消息通信</td><td>Topic 发布-订阅，节点间松耦合传输数据</td></tr>
+            <tr><td>服务调用</td><td>Service 请求-响应，需结果反馈</td></tr>
+            <tr><td>硬件接口</td><td>封装传感器/执行器，统一访问</td></tr>
+            <tr><td>工具与库</td><td><code>rviz</code>（可视化）、<code>rosbag</code>（记录回放）等</td></tr>
+          </table>
+          <h3 class="detail">模块化设计</h3>
+          <ul>
+            <li>功能拆成独立的「节点（Nodes）」，每个节点专注单一功能。</li>
+            <li>模块化大幅降低复杂机器人系统的开发门槛；加上丰富社区、文档与开源库，可快速复用构建应用。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="q" id="q2">
+      <div class="q-head" onclick="document.getElementById('b2').open=!document.getElementById('b2').open">
+        <span class="q-idx">2</span><span class="q-title">ROS1 和 ROS2 的区别？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>ROS1 基于<b>中心化 master</b>、以 Linux 为主、无实时/QoS/内置安全；ROS2 基于 <b>DDS</b>、跨平台、支持<b>实时性、QoS 与内置安全</b>，扩展性更强。</div>
+        <details id="b2">
+          <summary>展开：六维对比表</summary>
+          <table>
+            <tr><th>特性</th><th>ROS1</th><th>ROS2</th></tr>
+            <tr><td>通信机制</td><td>基于中心化的 ROS master</td><td>基于 DDS（数据分发服务）</td></tr>
+            <tr><td>实时性</td><td>不支持硬实时</td><td>支持实时性，适合实时系统</td></tr>
+            <tr><td>安全性</td><td>缺少内置安全机制</td><td>提供加密、认证、访问控制</td></tr>
+            <tr><td>平台支持</td><td>Linux 为主，其他平台弱</td><td>跨平台，含 Windows、RTOS</td></tr>
+            <tr><td>扩展性</td><td>有限，适合单机器人/小型系统</td><td>更强，支持复杂分布式系统</td></tr>
+            <tr><td>QoS 设置</td><td>不支持</td><td>支持 QoS，可调可靠性与延迟</td></tr>
+          </table>
+          <p style="color:var(--muted);font-size:13px;">记忆点：核心差异是「master 中心化 vs DDS 去中心化」，QoS/实时性/安全/跨平台都是围绕 DDS 长出来的能力。</p>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="q" id="q3">
+      <div class="q-head" onclick="document.getElementById('b3').open=!document.getElementById('b3').open">
+        <span class="q-idx">3</span><span class="q-title">ROS 相关的消息传递的大致流程？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>「注册 → 匹配 → 传输」：节点先向 master 注册自己的发布/订阅 topic，master 撮合后发布者与订阅者<b>点对点直连</b>，数据不再经 master 直接传输。</div>
+        <details id="b3">
+          <summary>展开：三步时序图</summary>
+          <div class="mermaid">
+sequenceDiagram
+    participant P as 发布者
+    participant S as 订阅者
+    participant M as ROS Master
+    P->>M: ① 启动时注册自己及发布的 topic
+    S->>M: ② 注册自己及订阅的 topic
+    M->>S: ③ 匹配：返回发布者地址
+    S->>P: ④ 直接建立点对点连接
+    P->>S: ⑤ 持续推送消息（不经 master）
+          </div>
+          <ol>
+            <li><b>节点注册</b>：节点启动时向 master 注册自身及其发布/订阅的 topic；master 是记录「谁发布/谁订阅」的注册表。</li>
+            <li><b>建立连接</b>：订阅者订阅某 topic 时，master 将订阅者与相应发布者匹配；之后二者<b>直接建立点对点连接</b>，数据不再经 master。</li>
+            <li><b>数据传递</b>：连接建立后发布者把消息推送到 topic，订阅者自动接收，过程对开发者透明（只需定义消息类型 + 调用 API）。</li>
+          </ol>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="q" id="q4">
+      <div class="q-head" onclick="document.getElementById('b4').open=!document.getElementById('b4').open">
+        <span class="q-idx">4</span><span class="q-title">DDS 通信的 QoS 有了解吗？</span><span class="stars st2">★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>QoS 让通信「可调」：<b>可靠性</b>（Best Effort/Reliable）、<b>历史</b>（Keep Last/Keep All）、<b>持久性</b>（Volatile/Persistent）等，按需权衡可靠性与延迟。</div>
+        <details id="b4">
+          <summary>展开：常用 QoS 策略表</summary>
+          <table>
+            <tr><th>策略</th><th>选项</th><th>作用</th></tr>
+            <tr><td rowspan="2">可靠性 Reliability</td><td>Best Effort</td><td>快速轻量，不保证送达，适合视频流/连续传感器数据</td></tr>
+            <tr><td>Reliable</td><td>每条确认送达，适合关键控制指令/任务分配</td></tr>
+            <tr><td rowspan="2">历史 History</td><td>Keep Last</td><td>仅保留最近 N 条，后来的订阅者只能取最近数据</td></tr>
+            <tr><td>Keep All</td><td>保存全部历史，便于回溯/离线订阅者</td></tr>
+            <tr><td>资源限制 Resource Limits</td><td>—</td><td>限制缓存消息数/内存，防止资源耗尽</td></tr>
+            <tr><td rowspan="2">时间相关性</td><td>Time-Based Filter</td><td>限制发送频率（如每秒 1 次），降低带宽</td></tr>
+            <tr><td>Deadline</td><td>消息须在指定间隔内到达，否则触发通知</td></tr>
+            <tr><td rowspan="2">优先级</td><td>Latency Budget</td><td>设定每条消息期望最大延迟</td></tr>
+            <tr><td>Transport Priority</td><td>按优先级传递，保证关键消息实时</td></tr>
+            <tr><td rowspan="3">持久性 Durability</td><td>Volatile</td><td>仅在发布时传递，新订阅者拿不到历史</td></tr>
+            <tr><td>Transient / Transient Local</td><td>保留一段时间历史，新订阅者也能收到</td></tr>
+            <tr><td>Persistent</td><td>消息永久存储，适合长周期访问</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 7.2 ============ -->
+    <h2 id="s72" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">7.2 通信机制类</h2>
+
+    <!-- Q5 -->
+    <div class="q" id="q5">
+      <div class="q-head" onclick="document.getElementById('b5').open=!document.getElementById('b5').open">
+        <span class="q-idx">5</span><span class="q-title">ROS1 常用通信机制及应用场景？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>三种：<b>Topic</b>（发布-订阅，持续数据流）、<b>Service</b>（请求-响应，需结果）、<b>Action</b>（异步长任务 + 实时反馈）。</div>
+        <details id="b5">
+          <summary>展开：三种机制 &amp; 场景</summary>
+          <div class="mermaid">
+flowchart LR
+    A[Topic 发布-订阅] -->|持续数据流| B[传感器数据/实时图像/位置]
+    C[Service 请求-响应] -->|一次性结果| D[查询状态/请求路径规划]
+    E[Action 异步长任务] -->|实时反馈| F[运动控制/路径跟踪]
+          </div>
+          <table>
+            <tr><th>机制</th><th>模型</th><th>适用场景</th></tr>
+            <tr><td>Topic</td><td>发布-订阅</td><td>持续数据流：传感器数据、实时图像、位置信息（多订阅者可同时接收）</td></tr>
+            <tr><td>Service</td><td>请求-响应（类似函数调用）</td><td>需结果反馈：查询状态、请求路径规划结果</td></tr>
+            <tr><td>Action</td><td>类似 Service + 异步</td><td>长时间任务、支持异步与实时反馈：运动控制、路径跟踪</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="q" id="q6">
+      <div class="q-head" onclick="document.getElementById('b6').open=!document.getElementById('b6').open">
+        <span class="q-idx">6</span><span class="q-title">ROS 的 Topic 和 Service 什么区别？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>Topic 是<b>发布-订阅、异步、持续流</b>（一对多、高频）；Service 是<b>请求-响应、同步、一次性</b>（一对一、需返回值）。</div>
+        <details id="b6">
+          <summary>展开：对比表 &amp; 时序</summary>
+          <div class="mermaid">
+sequenceDiagram
+    participant C as 客户端 Service Client
+    participant S as 服务端 Service Server
+    C->>S: 请求 request
+    Note over S: 处理后返回
+    S-->>C: 响应 response
+    Note over C,S: 同步、一次性请求-响应（对比 Topic 的异步多对多流）
+          </div>
+          <table>
+            <tr><th>特性</th><th>Topic</th><th>Service</th></tr>
+            <tr><td>通信模式</td><td>发布-订阅</td><td>请求-响应</td></tr>
+            <tr><td>数据流</td><td>持续流动的数据</td><td>一次性请求与返回</td></tr>
+            <tr><td>时间特性</td><td>异步传输</td><td>同步调用</td></tr>
+            <tr><td>订阅/客户端数量</td><td>一个发布者可多个订阅者</td><td>客户端发请求，服务器处理后返回</td></tr>
+            <tr><td>使用场景</td><td>传感器数据、图像流等实时数据</td><td>获取状态值或执行一次性任务</td></tr>
+            <tr><td>效率</td><td>适合高频数据传输</td><td>适合低频、需明确反馈的任务</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- ============ 7.3 ============ -->
+    <h2 id="s73" style="color:#0f172a;border-bottom:2px solid #2563eb;padding-bottom:6px;margin-top:28px;">7.3 工具与命令类</h2>
+
+    <!-- Q7 -->
+    <div class="q" id="q7">
+      <div class="q-head" onclick="document.getElementById('b7').open=!document.getElementById('b7').open">
+        <span class="q-idx">7</span><span class="q-title">常用的 ROS 命令</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>启动：<code>roscore</code>/<code>rosrun</code>/<code>roslaunch</code>；查控：<code>rostopic</code>/<code>rosservice</code>/<code>rosnode</code>；记录：<code>rosbag</code>；参数：<code>rosparam</code>。</div>
+        <details id="b7">
+          <summary>展开：命令速查表</summary>
+          <table>
+            <tr><th>命令</th><th>功能</th></tr>
+            <tr><td><code>roscore</code></td><td>启动 ROS 主控程序，须在其他节点前运行</td></tr>
+            <tr><td><code>rosrun</code></td><td>运行单个 ROS 节点，快速启动功能模块</td></tr>
+            <tr><td><code>roslaunch</code></td><td>启动多个节点和相关参数，适合部署复杂系统</td></tr>
+            <tr><td><code>rostopic list</code></td><td>查看所有当前活跃的 topic</td></tr>
+            <tr><td><code>rostopic echo</code></td><td>打印指定 topic 的消息</td></tr>
+            <tr><td><code>rostopic pub</code></td><td>手动向某 topic 发布消息</td></tr>
+            <tr><td><code>rosnode list</code></td><td>列出当前运行的节点</td></tr>
+            <tr><td><code>rosnode info</code></td><td>显示节点信息（含发布/订阅的 topic）</td></tr>
+            <tr><td><code>rosservice list</code></td><td>查看当前可用的服务</td></tr>
+            <tr><td><code>rosservice call</code></td><td>调用一个服务并传递参数</td></tr>
+            <tr><td><code>rosbag record</code></td><td>录制特定 topic，生成 .bag 文件用于调试回放</td></tr>
+            <tr><td><code>rosbag play</code></td><td>回放 .bag 文件，重现原始消息流</td></tr>
+            <tr><td><code>rosparam get</code></td><td>获取某个参数值</td></tr>
+            <tr><td><code>rosparam set</code></td><td>设置某个参数值</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="q" id="q8">
+      <div class="q-head" onclick="document.getElementById('b8').open=!document.getElementById('b8').open">
+        <span class="q-idx">8</span><span class="q-title">常用的 ROS 工具有哪些？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>可视化 <code>rviz</code>、录制回放 <code>rosbag</code>、通信图 <code>rqt_graph</code>、曲线 <code>rqt_plot</code>、坐标变换 <code>tf</code>、物理仿真 <code>gazebo</code>。</div>
+        <details id="b8">
+          <summary>展开：工具对照表</summary>
+          <table>
+            <tr><th>工具</th><th>功能描述</th></tr>
+            <tr><td><code>rviz</code></td><td>数据可视化：显示传感器数据、机器人状态、路径规划结果</td></tr>
+            <tr><td><code>rosbag</code></td><td>数据记录与回放，用于调试算法、验证系统</td></tr>
+            <tr><td><code>rqt_graph</code></td><td>图形化显示节点与 topic 的通信关系</td></tr>
+            <tr><td><code>rqt_plot</code></td><td>实时绘制数据变化曲线，便于分析变量趋势</td></tr>
+            <tr><td><code>tf</code></td><td>坐标变换工具，管理不同坐标系之间的转换</td></tr>
+            <tr><td><code>gazebo</code></td><td>物理仿真，与 ROS 配合测试机器人模型、验证算法</td></tr>
+          </table>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q9 -->
+    <div class="q" id="q9">
+      <div class="q-head" onclick="document.getElementById('b9').open=!document.getElementById('b9').open">
+        <span class="q-idx">9</span><span class="q-title">是否了解 rosrun、rosbag？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>rosrun</code> 启动单个节点（快速调试）；<code>rosbag</code> 录制/回放消息数据（离线调试算法、复现同一数据流）。</div>
+        <details id="b9">
+          <summary>展开：用法演示</summary>
+          <h3 class="detail">rosrun：启动单个节点</h3>
+          <pre><code># 运行包 package_name 中的可执行节点 node_name
+rosrun package_name node_name</code></pre>
+          <ul>
+            <li>快速运行某个功能模块，特别适合<b>调试单个节点</b>的功能。</li>
+          </ul>
+          <h3 class="detail">rosbag：录制 / 回放消息</h3>
+          <pre><code># 录制指定 topic 到 .bag 文件
+rosbag record /topic_name
+
+# 回放 .bag 文件，重现原始消息流
+rosbag play my_record.bag</code></pre>
+          <ul>
+            <li>可录制传感器数据、控制命令等；实际场景录制后<b>离线回放</b>调试算法。</li>
+            <li>可多次回放同一数据流，测试不同处理逻辑。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q10 -->
+    <div class="q" id="q10">
+      <div class="q-head" onclick="document.getElementById('b10').open=!document.getElementById('b10').open">
+        <span class="q-idx">10</span><span class="q-title">roslaunch 和 rosrun 的区别？</span><span class="stars st3">★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span><code>rosrun</code> 一次只启<b>一个节点</b>；<code>roslaunch</code> 通过 launch 文件<b>一次启多个节点</b>并预配参数与启动顺序，适合完整系统部署。</div>
+        <details id="b10">
+          <summary>展开：对比表 &amp; 示例</summary>
+          <table>
+            <tr><th>命令</th><th>特点</th><th>适用场景</th></tr>
+            <tr><td><code>rosrun</code></td><td>一次只能启动一个节点</td><td>快速测试单个功能模块</td></tr>
+            <tr><td><code>roslaunch</code></td><td>同时启动多个节点，用 launch 文件预配参数与启动顺序</td><td>部署完整机器人系统或复杂场景</td></tr>
+          </table>
+          <h3 class="detail">roslaunch 用法</h3>
+          <pre><code># 通过 launch 文件一次性启动多个节点
+roslaunch package_name launch_file.launch</code></pre>
+          <ul>
+            <li>实际开发常编写 launch 文件，一次启动很多节点，省去多开终端的麻烦。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+    <!-- Q11 -->
+    <div class="q" id="q11">
+      <div class="q-head" onclick="document.getElementById('b11').open=!document.getElementById('b11').open">
+        <span class="q-idx">11</span><span class="q-title">ROS 中如何杀死一个进程？</span><span class="stars st4">★★★★</span>
+      </div>
+      <div class="q-body">
+        <div class="gist"><span class="lbl">一句话</span>三种：<code>rosnode kill</code> 关节点、<code>kill &lt;PID&gt;</code> 杀系统进程、终端 <code>Ctrl+C</code> 停前台节点。</div>
+        <details id="b11">
+          <summary>展开：三种方式</summary>
+          <pre><code># ① 关闭指定 ROS 节点
+rosnode kill &lt;node_name&gt;
+
+# ② 关闭节点对应的系统进程
+kill &lt;PID&gt;
+
+# ③ 直接在启动节点的终端按 Ctrl+C 停止</code></pre>
+          <ul>
+            <li><b>rosnode kill</b>：按节点名关闭指定 ROS 节点。</li>
+            <li><b>kill &lt;PID&gt;</b>：知道节点对应系统进程 PID 时，直接杀进程。</li>
+            <li><b>Ctrl+C</b>：对终端前台启动的节点直接中断。</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad:true, theme:'default', securityLevel:'loose',
+    flowchart:{ curve:'basis' }, themeVariables:{ fontFamily:'"Segoe UI","Microsoft YaHei",sans-serif' } });
+</script>
+</body>
+</html>
